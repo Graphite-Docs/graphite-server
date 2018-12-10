@@ -3,7 +3,7 @@ const http = require("http");
 const socketIO = require("socket.io");
 
 // our localhost port
-const port = 4001;
+const port = process.env.REACT_APP_SERVER || 5000;
 
 const app = express();
 

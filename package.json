@@ -5,8 +5,12 @@
     "start": "node index.js"
   },
   "dependencies": {
+    "body-parser": "^1.18.3",
+    "cors": "^2.8.5",
     "dotenv": "^7.0.0",
     "express": "^4.16.3",
+    "jsonwebtoken": "^8.5.1",
+    "mongodb": "^3.2.3",
     "radiks-server": "^0.1.10",
     "socket.io": "^2.0.4"
   },

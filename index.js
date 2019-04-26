@@ -1,7 +1,10 @@
 const express = require("express");
+var cors = require('cors')
 const http = require("http");
 const socketIO = require("socket.io");
 const { setup } = require('radiks-server');
+const trial = require('./helpers/trialAccount');
+const jwt = require('jsonwebtoken');
 
 // our localhost port
 const port = process.env.REACT_APP_SERVER || 5000;
@@ -10,6 +13,27 @@ require('dotenv').config()
 const mongo = process.env.MONGO_URI_DEV;
 
 const app = express();
+const bodyParser = require("body-parser");
+
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
+app.use(cors());
+
+app.post('/new-trial-account', async (req, res, next) => {
+  const headers = req.headers;
+  const decoded = jwt.decode(headers.authorization)
+  const submissionData = req.body;
+  if(req.body) {
+    if(submissionData.jwt === headers.authorization) {
+      const trialAccount = await trial.postSignUp(submissionData, decoded);
+      res.send(trialAccount)
+    } else {
+      res.send("Invalid token")
+    }
+  } else {
+    res.send("Error")
+  }
+})
 
 setup({
   mongoDBUrl: mongo

@@ -1,45 +1,87 @@
 const express = require("express");
+const expressOasGenerator = require('express-oas-generator');
 var cors = require('cors')
 const http = require("http");
 const socketIO = require("socket.io");
-const { setup } = require('radiks-server');
-const trial = require('./helpers/trialAccount');
+const newUserAccount = require('./routes/account/user/new');
+const newOrgAccount = require('./routes/account/org/new');
+const getUserAccount = require('./routes/account/user/fetch');
 const jwt = require('jsonwebtoken');
+const blockstack = require('blockstack');
 
 // our localhost port
+require('dotenv').config()
 const port = process.env.REACT_APP_SERVER || 5000;
 
-require('dotenv').config()
-const mongo = process.env.MONGO_URI_DEV;
-
 const app = express();
+expressOasGenerator.init(app, {});
 const bodyParser = require("body-parser");
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cors());
 
-app.post('/new-trial-account', async (req, res, next) => {
+//Posts
+
+/*User*/
+app.post('/account/user', async (req, res, next) => {
   const headers = req.headers;
-  const decoded = jwt.decode(headers.authorization)
-  const submissionData = req.body;
+  const decoded = jwt.decode(headers.authorization);
+  const pubKey = req.body.pubKey;
   if(req.body) {
-    if(submissionData.jwt === headers.authorization) {
-      const trialAccount = await trial.postSignUp(submissionData, decoded);
-      res.send(trialAccount)
-    } else {
-      res.send("Invalid token")
+    try { 
+      const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
+      if(verify) {
+        const submissionData = req.body;
+        const trialAccount = await newUserAccount.postSignUp(submissionData, decoded);
+        res.send(trialAccount);
+      } else {
+        res.send({data: "Invalid token"})
+      }
+    } catch(err) {
+      res.send(err);
     }
   } else {
     res.send("Error")
   }
 })
 
-setup({
-  mongoDBUrl: mongo
-}).then((RadiksController) => {
-  app.use('/radiks', RadiksController);
-});
+/*Org*/
+app.post('/account/org', async (req, res, next) => {
+  const headers = req.headers;
+  const decoded = jwt.decode(headers.authorization);
+  const pubKey = req.body.pubKey;
+  if(req.body) {
+    try { 
+      const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
+      if(verify) {
+        const submissionData = req.body;
+        const newOrg = await newOrgAccount.postSignUp(submissionData, decoded);
+        res.send(newOrg);
+      } else {
+        res.send({data: "Invalid token"});
+      }
+    } catch(err) {
+      res.send(err);
+    }
+  } else {
+    res.send("Error")
+  }
+})
+
+//Gets
+
+/*User*/
+app.get('/account/user/:id', async (req, res, next) => {
+  var username = req.params.id;
+  const userData = await getUserAccount.fetchUser(username);
+  res.send(userData)
+})
+
+/*Org*/
+
+
+//Puts
 
 // our server instance
 const server = http.createServer(app);

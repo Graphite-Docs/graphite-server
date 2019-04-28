@@ -6,10 +6,10 @@ const socketIO = require("socket.io");
 const newUserAccount = require('./routes/account/user/new');
 const newOrgAccount = require('./routes/account/org/new');
 const getUserAccount = require('./routes/account/user/fetch');
+const getOrgAccount = require('./routes/account/org/fetch');
 const jwt = require('jsonwebtoken');
 const blockstack = require('blockstack');
 
-// our localhost port
 require('dotenv').config()
 const port = process.env.REACT_APP_SERVER || 5000;
 
@@ -80,6 +80,11 @@ app.get('/account/user/:id', async (req, res, next) => {
 
 /*Org*/
 
+app.get('/account/org/:id', async (req, res, next) => {
+  var orgName = req.params.id;
+  const orgData = await getOrgAccount.fetchOrg(orgName);
+  res.send(orgData);
+})
 
 //Puts
 

@@ -12,12 +12,14 @@ module.exports = {
         const teamId = uuid();
         //Construct the account profile
         const orgProfile = {
+            orgId: orgData.orgId,
             orgName: orgData.organization, 
             orgCreator: orgData.blockstackId, 
             orgCreatorEmail: orgData.email,
             trialAccount: {
                 onTrial: true,
-                signUpDate: date.getMonthDayYear()
+                signUpDate: date.getMonthDayYear(),
+                trialEnd: new Date().setDate(new Date().getDate() + 30)
             },
             paymentInfo: {
                 lastPaidDate: "", 

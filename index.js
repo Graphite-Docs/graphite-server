@@ -7,6 +7,8 @@ const newUserAccount = require('./routes/account/user/new');
 const newOrgAccount = require('./routes/account/org/new');
 const getUserAccount = require('./routes/account/user/fetch');
 const getOrgAccount = require('./routes/account/org/fetch');
+const audits = require('./routes/account/audit/new');
+const updateOrg = require('./routes/account/org/update');
 const jwt = require('jsonwebtoken');
 const blockstack = require('blockstack');
 
@@ -14,7 +16,13 @@ require('dotenv').config()
 const port = process.env.REACT_APP_SERVER || 5000;
 
 const app = express();
-expressOasGenerator.init(app, {});
+expressOasGenerator.init(app, {
+  info: {
+    title: "Graphite Pro API", 
+    version: "0.1.0",
+    description: "Rest API available for all Graphite Pro customers"
+  }
+});
 const bodyParser = require("body-parser");
 
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -28,13 +36,15 @@ app.post('/account/user', async (req, res, next) => {
   const headers = req.headers;
   const decoded = jwt.decode(headers.authorization);
   const pubKey = req.body.pubKey;
+  //At some point, need to check for API Key vs Bearer Token
   if(req.body) {
     try { 
+      const teamId = req.body.teamId;
       const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
       if(verify) {
         const submissionData = req.body;
-        const trialAccount = await newUserAccount.postSignUp(submissionData, decoded);
-        res.send(trialAccount);
+        const userAccount = await newUserAccount.postSignUp(submissionData, decoded, teamId);
+        res.send(userAccount);
       } else {
         res.send({data: "Invalid token"})
       }
@@ -51,6 +61,7 @@ app.post('/account/org', async (req, res, next) => {
   const headers = req.headers;
   const decoded = jwt.decode(headers.authorization);
   const pubKey = req.body.pubKey;
+  //At some point, need to check for API Key vs Bearer Token
   if(req.body) {
     try { 
       const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
@@ -62,31 +73,164 @@ app.post('/account/org', async (req, res, next) => {
         res.send({data: "Invalid token"});
       }
     } catch(err) {
-      res.send(err);
+      res.send("Invalid Token");
     }
   } else {
     res.send("Error")
   }
 })
 
+/*Audits*/
+app.post('/account/audit', async (req, res, next) => {
+  const headers = req.headers;
+  const decoded = jwt.decode(headers.authorization);
+  const pubKey = req.body.pubKey;
+  //At some point, need to check for API Key vs Bearer Token
+  if(req.body) {
+    try {
+      const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
+      if(verify) {
+        const auditData = req.body;
+        const newAudit = await audits.newAudit(auditData, decoded);
+        res.send(newAudit);
+      } else {
+        res.send("Invalid Token")
+      }
+    } catch(err) {
+      res.send("Invalid Token")
+    }
+  } else {
+    res.send("No data sent")
+  }
+})
+
 //Gets
 
 /*User*/
-app.get('/account/user/:id', async (req, res, next) => {
-  var username = req.params.id;
-  const userData = await getUserAccount.fetchUser(username);
-  res.send(userData)
+app.get('/account/user/:id/:key', async (req, res, next) => {
+  const headers = req.headers;
+  if(req.body) {
+    try {
+      const pubKey = req.params.key;
+      const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
+      if(verify) {
+        const username = req.params.id;
+        const userData = await getUserAccount.fetchUser(username);
+        res.send(userData)
+      } else {
+        res.send("Invalid Token")
+      }
+    } catch(err) {
+      res.send("Invalid Token")
+    }
+  } else {
+    res.send("No params included");
+  }
 })
 
 /*Org*/
 
-app.get('/account/org/:id', async (req, res, next) => {
-  var orgName = req.params.id;
-  const orgData = await getOrgAccount.fetchOrg(orgName);
-  res.send(orgData);
+app.get('/account/org/:id/:key', async (req, res, next) => {
+  const headers = req.headers;
+  if(req.body) {
+    try {
+      const pubKey = req.params.key;
+      const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
+      if(verify) {
+        var orgId = req.params.id;
+        const orgData = await getOrgAccount.fetchOrg(orgId);
+        res.send(orgData);
+      } else {
+        res.send("Invalid Token")
+      }
+    } catch(err) {
+      res.send("Invalid Token");
+    }
+  } else {
+    res.send("No params included");
+  }
 })
 
 //Puts
+
+/*Org*/
+app.put('/account/org/name', async(req, res, next) => {
+  const headers = req.headers;
+  const decoded = jwt.decode(headers.authorization);
+  const pubKey = req.body.pubKey;
+  //At some point, need to check for API Key vs Bearer Token
+  if(req.body) {
+    try { 
+      const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
+      if(verify) {
+        const data = req.body;
+        const org = await updateOrg.updateOrgName(data, decoded);
+        console.log(org);
+        res.send(org);
+      } else {
+        res.send({data: "Token Verification Failed: Invalid token"});
+      }
+    } catch(err) {
+      res.send("Error With Auth Token");
+    }
+  } else {
+    res.send("Error")
+  }
+})
+
+app.put('/account/org/plan', async(err, res) => {
+  if(err) {
+    res.send(err);
+  } else {
+    const headers = req.headers;
+    const decoded = jwt.decode(headers.authorization);
+    const pubKey = req.body.pubKey;
+    //At some point, need to check for API Key vs Bearer Token
+    if(req.body) {
+      try { 
+        const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
+        if(verify) {
+          const submissionData = req.body;
+          const org = await updateOrg.updateOrgPlan(submissionData, decoded);
+          res.send(org);
+        } else {
+          res.send({data: "Invalid token"});
+        }
+      } catch(err) {
+        res.send("Invalid Token");
+      }
+    } else {
+      res.send("Error")
+    }
+  }
+})
+
+app.put('/account/org/teams', async(err, res) => {
+  if(err) {
+    res.send(err);
+  } else {
+    const headers = req.headers;
+    const decoded = jwt.decode(headers.authorization);
+    const pubKey = req.body.pubKey;
+    //At some point, need to check for API Key vs Bearer Token
+    if(req.body) {
+      try { 
+        const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
+        if(verify) {
+          const submissionData = req.body;
+          const org = await updateOrg.updateOrgTeams(submissionData, decoded);
+          res.send(org);
+        } else {
+          res.send({data: "Invalid token"});
+        }
+      } catch(err) {
+        res.send("Invalid Token");
+      }
+    } else {
+      res.send("Error")
+    }
+  }
+})
 
 // our server instance
 const server = http.createServer(app);

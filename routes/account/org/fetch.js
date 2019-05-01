@@ -1,10 +1,10 @@
 const MongoClient = require('mongodb').MongoClient;
-require('dotenv').config()
+require('dotenv').config();
 
 const uri = process.env.MONGO_URI_PRO_ACCOUNTS_DEV;
 
 module.exports = {
-    fetchOrg: function(orgName) {
+    fetchOrg: function(orgId) {
         let success = {};
         const mongoResponse = new Promise((resolve, reject) => {
             MongoClient.connect(uri, {useNewUrlParser: true}, function(err, client) {
@@ -20,7 +20,7 @@ module.exports = {
                     const collection = client.db("graphite-docs-pro-accounts").collection("organizations");
                     // Perform actions on the collection object
                     //Find user
-                    collection.find({'orgProfile.orgName': orgName}).toArray(function(err, docs) {
+                    collection.find({'orgProfile.orgId': orgId}).toArray(function(err, docs) {
                         if(err) {
                             console.log(err)
                             success = {
@@ -33,7 +33,16 @@ module.exports = {
                             if(docs.length > 0) {
                                 //If the user ID is found, we shoudn't add them
                                 console.log("Found the following records");
-                                let orgDoc = docs[0]
+                                let orgDoc = docs[0];
+                                if(orgDoc.orgProfile.trialAccount.onTrial) {
+                                    const currentDate = Date.now();
+                                    if(currentDate > orgDoc.orgProfile.trialAccount.trialEnd) {
+                                        orgDoc.orgProfile.trialAccount["expired"] = true;
+                                    } else {
+                                        orgDoc.orgProfile.trialAccount["expired"] = false;
+                                        orgDoc.orgProfile.trialAccount["timestamp"] = Date.now();
+                                    }
+                                }
                                 success = {
                                     success: true, 
                                     data: orgDoc

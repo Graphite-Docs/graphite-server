@@ -11,6 +11,7 @@ module.exports = {
         //Construct the account profile
         const accountProfile = {
             orgInfo: {
+                orgId: signUpData.orgId,
                 name: signUpData.organization,
                 creator: signUpData.blockstackId
             },

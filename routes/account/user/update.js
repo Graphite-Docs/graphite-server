@@ -49,5 +49,56 @@ module.exports = {
             console.log(success);
             return success;
         })
+    }, 
+    updateTeamMembership: function(data, token) {
+        console.log("updating team membership")
+        const teamObj = {
+            teamId: data.team.id,
+            name: data.team.name,
+        }
+        const mongoResponse = new Promise((resolve, reject) => {
+            MongoClient.connect(uri, {useNewUrlParser: true}, function(err, client) {
+                if(err) {
+                    success = {
+                        success: false, 
+                        message: "Error occurred while connecting to DB...\n"
+                    };
+                    resolve(success);
+                } else {
+                    console.log('Connected...');
+                    const collection = client.db("graphite-docs-pro-accounts").collection("users");
+                    // Perform actions on the collection object
+                    collection.updateOne({"accountProfile.profile.username": token.claim.username}, {$push: {"accountProfile.membershipTeams": teamObj}}, function(err, res) {
+                        if(err) {
+                            success = {
+                                success: false, 
+                                message: "Error",
+                                data: err
+                            }
+                            resolve(success);
+                            client.close();
+                            const auditDetails = {
+                                username: token.claim.username, 
+                                date: new Date(), 
+                                actions: "Updated team membership", 
+                                data: data
+                            }
+                            audits.postAudit(auditDetails);
+                        } else {
+                            success = {
+                                success: true, 
+                                data: res
+                            }
+                            resolve(success);
+                            client.close();
+                        }
+                    })
+                }
+             });
+        });
+        return mongoResponse.then((success) => {
+            console.log(success);
+            return success;
+        })
     }
 }

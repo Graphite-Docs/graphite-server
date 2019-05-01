@@ -17,7 +17,8 @@ module.exports = {
             },
             profile: {
                 username: token.claim.username,
-                email: signUpData.email
+                email: signUpData.email, 
+                pubKey: token.claim.pubKey
             },
             membershipTeams: [
                 {

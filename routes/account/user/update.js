@@ -1,7 +1,7 @@
 const MongoClient = require('mongodb').MongoClient;
 require('dotenv').config()
 const uri = process.env.MONGO_URI_PRO_ACCOUNTS_DEV;
-const audits = require('../audit/new');
+//const audits = require('../../audit/org/new');
 
 module.exports = {
     updateOrgName: function(data, token) {
@@ -26,13 +26,13 @@ module.exports = {
                             }
                             resolve(success);
                             client.close();
-                            const auditDetails = {
-                                username: token.claim.username, 
-                                date: new Date(), 
-                                actions: "Updated org name", 
-                                data: data.orgName
-                            }
-                            audits.postAudit(auditDetails);
+                            // const auditDetails = {
+                            //     username: token.claim.username, 
+                            //     date: new Date(), 
+                            //     actions: "Updated org name", 
+                            //     data: data.orgName
+                            // }
+                            //audits.postAudit(auditDetails);
                         } else {
                             success = {
                                 success: true, 
@@ -83,7 +83,7 @@ module.exports = {
                                 actions: "Updated team membership", 
                                 data: data
                             }
-                            audits.postAudit(auditDetails);
+                            //audits.postAudit(auditDetails);
                         } else {
                             success = {
                                 success: true, 

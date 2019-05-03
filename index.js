@@ -7,12 +7,13 @@ const newUserAccount = require('./routes/account/user/new');
 const newOrgAccount = require('./routes/account/org/new');
 const getUserAccount = require('./routes/account/user/fetch');
 const getOrgAccount = require('./routes/account/org/fetch');
-const audits = require('./routes/account/audit/new');
+//const orgAudit = require('./routes/audit/org/new');
 const updateOrg = require('./routes/account/org/update');
+const email = require('./communication/email');
 const jwt = require('jsonwebtoken');
 const blockstack = require('blockstack');
 
-require('dotenv').config()
+require('dotenv').config();
 const port = process.env.REACT_APP_SERVER || 5000;
 
 const app = express();
@@ -38,17 +39,56 @@ app.post('/account/user', async (req, res, next) => {
   const pubKey = req.body.pubKey;
   //At some point, need to check for API Key vs Bearer Token
   if(req.body) {
+    let updateTeam = false;
     try { 
-      const teamId = req.body.teamId;
+      if(req.query.updateTeam === 'true') {
+        updateTeam = true;
+      } 
       const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
       if(verify) {
-        const submissionData = req.body;
-        const userAccount = await newUserAccount.postSignUp(submissionData, decoded, teamId);
-        res.send(userAccount);
+        const payload = {
+          data: req.body,
+          token: decoded
+        }
+        //First we check if the user exists already
+        let fetchData;
+        let fetchUser;
+        if(req.body.username !==null) {
+          fetchData = {
+            orgId: req.body.orgId,
+            username: req.body.usernam
+          }
+          fetchUser = await getUserAccount.fetchUser(fetchData);
+        } else {
+          fetchData = {
+            orgId: req.body.orgId,
+            id: req.body.id
+          }
+          fetchUser = await getUserAccount.fetchUserById(fetchData);
+        }
+        let userAccount;
+        let teamData;
+        if(fetchUser.message === "No user found") {
+          userAccount = await newUserAccount.postNewUser(payload);
+          if(updateTeam === true) {
+            teamData = await newUserAccount.postToTeam(payload);
+            res.send(teamData);
+          } else {
+            res.send(userAccount);
+          }
+        } else {
+          if(updateTeam === true) {
+            teamData = await newUserAccount.postToTeam(payload);
+            res.send(teamData);
+          } else {
+            res.send(userAccount);
+          }
+        }
       } else {
         res.send({data: "Invalid token"})
       }
     } catch(err) {
+      console.log(err)
       res.send(err);
     }
   } else {
@@ -103,45 +143,57 @@ app.post('/account/org/team', async(req, res, next) => {
   }
 })
 
-/*Audits*/
-app.post('/account/audit', async (req, res, next) => {
+/*Emails*/
+
+app.post('/emails/invite', async (req, res, next) => {
   const headers = req.headers;
-  const decoded = jwt.decode(headers.authorization);
-  const pubKey = req.body.pubKey;
-  //At some point, need to check for API Key vs Bearer Token
+  const pubKey = req.body.userData.pubKey;
   if(req.body) {
-    try {
+    try { 
       const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
       if(verify) {
-        const auditData = req.body;
-        const newAudit = await audits.newAudit(auditData, decoded);
-        res.send(newAudit);
+        const payload = req.body;
+        const invite = await email.sendInviteEmail(payload);
+        console.log(invite);
+        res.send(invite);
       } else {
-        res.send("Invalid Token")
+        res.send({data: "Invalid token"});
       }
     } catch(err) {
-      res.send("Invalid Token")
+      res.send("Invalid Token");
     }
   } else {
-    res.send("No data sent")
+    res.send("Error")
   }
+})
+
+/*Audits*/
+app.post('/audit/org', async (req, res, next) => {
+  
+})
+
+app.post('/audit/user', async (req, res, next) => {
+  
 })
 
 //Gets
 
 /*User*/
-app.get('/account/user/:id/:key', async (req, res, next) => {
+app.get('/account/org/:orgId/user/:id', async (req, res, next) => {
   const headers = req.headers;
   const decoded = jwt.decode(headers.authorization);
   if(req.body) {
     try {
-      const pubKey = req.params.key;
+      const pubKey = req.query.pubKey;
       const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
       if(verify) {
         //Check if the user requesting data is the same as the target
         if(decoded.claim.username === req.params.id) {
-          const username = req.params.id;
-          const userData = await getUserAccount.fetchUser(username);
+          const payload = {
+            username: req.params.id,
+            orgId: req.params.orgId
+          }
+          const userData = await getUserAccount.fetchUser(payload);
           res.send(userData)
         } else {
           //Need admin level or role-specific API key to access other users
@@ -161,26 +213,31 @@ app.get('/account/user/:id/:key', async (req, res, next) => {
 
 /*Org*/
 
-app.get('/account/org/:id/:key', async (req, res, next) => {
+app.get('/account/org/:id', async (req, res, next) => {
+  console.log("here we go")
   const headers = req.headers;
   if(headers.authorization) {
     const decoded = jwt.decode(headers.authorization);
     const username = decoded.claim.username;
     if(req.body) {
       try {
-        const pubKey = req.params.key;
+        const pubKey = req.query.pubKey;
         const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
         if(verify) {
           var orgId = req.params.id;
-          const personData = await getUserAccount.fetchUser(username);
+          const orgData = await getOrgAccount.fetchOrg(orgId);
+          res.send(orgData);
+          //Need to eventually verify this data
+          /*******************/
+          //const personData = await getUserAccount.fetchUser(username);
           //Need to verify that the user is a member of the org being requested
-          if(personData.data.accountProfile.orgInfo.orgId === req.params.id) {
-            const orgData = await getOrgAccount.fetchOrg(orgId);
-            res.send(orgData);
-          } else {
-            res.status(401);
-            res.send("Access denied");
-          }
+          // if(personData.data.accountProfile.orgInfo.orgId === req.params.id) {
+          //   const orgData = await getOrgAccount.fetchOrg(orgId);
+          //   res.send(orgData);
+          // } else {
+          //   res.status(401);
+          //   res.send("Access denied");
+          // }
         } else {
           res.send("Invalid Auth Token")
         }
@@ -208,14 +265,18 @@ app.put('/account/org/name/:id', async(req, res, next) => {
     try { 
       const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
       if(verify) {
-        const personData = await getUserAccount.fetchUser(username);
-        if(personData.data.accountProfile.orgInfo.orgId === req.params.id) {
-          const data = req.body;
-          const org = await updateOrg.updateOrgName(data, decoded);
-          res.send(org);
-        } else {
-          res.send("Access denied");
-        }
+        const data = req.body;
+        const org = await updateOrg.updateOrgName(data, decoded);
+        res.send(org);
+        //TODO: Need to come back and add in this security layer
+        // const personData = await getUserAccount.fetchUser(username);
+        // if(personData.data.accountProfile.orgInfo.orgId === req.params.id) {
+        //   const data = req.body;
+        //   const org = await updateOrg.updateOrgName(data, decoded);
+        //   res.send(org);
+        // } else {
+        //   res.send("Access denied");
+        // }
       } else {
         res.send({data: "Token Verification Failed: Invalid token"});
       }

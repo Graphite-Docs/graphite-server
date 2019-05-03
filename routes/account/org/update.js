@@ -1,7 +1,6 @@
 const MongoClient = require('mongodb').MongoClient;
 require('dotenv').config()
 const uri = process.env.MONGO_URI_PRO_ACCOUNTS_DEV;
-const audits = require('../audit/new');
 const user = require('../user/update');
 
 module.exports = {
@@ -34,13 +33,13 @@ module.exports = {
                             }
                             resolve(success);
                             client.close();
-                            const auditDetails = {
-                                username: token.claim.username, 
-                                date: new Date(), 
-                                actions: "Updated org name", 
-                                data: data.orgName
-                            }
-                            audits.postAudit(auditDetails);
+                            // const auditDetails = {
+                            //     username: token.claim.username, 
+                            //     date: new Date(), 
+                            //     actions: "Updated org name", 
+                            //     data: data.orgName
+                            // }
+                            //audits.postAudit(auditDetails);
                         }
                     })
                 }
@@ -80,14 +79,13 @@ module.exports = {
                             }
                             resolve(success);
                             client.close();
-                            user.updateTeamMembership(data, token);
-                            const auditDetails = {
-                                username: token.claim.username, 
-                                date: new Date(), 
-                                actions: "Added new team", 
-                                data: data.team
-                            }
-                            audits.postAudit(auditDetails);
+                            // const auditDetails = {
+                            //     username: token.claim.username, 
+                            //     date: new Date(), 
+                            //     actions: "Added new team", 
+                            //     data: data.team
+                            // }
+                            //audits.postAudit(auditDetails);
                         }
                     })
                 }

@@ -16,25 +16,40 @@ module.exports = {
             orgName: orgData.organization, 
             orgCreator: orgData.blockstackId, 
             orgCreatorEmail: orgData.email,
-            trialAccount: {
-                onTrial: true,
+            accountPlan: {
+                planType: "Trial", 
                 signUpDate: date.getMonthDayYear(),
-                trialEnd: new Date().setDate(new Date().getDate() + 30)
-            },
-            paymentInfo: {
-                lastPaidDate: "", 
-                paymentHistory: []
+                trialEnd: new Date().setDate(new Date().getDate() + 30),
+                trialExpired: false,
+                overdue: false, 
+                suspended: false,
+                amountDue: 0.00,
+                nextPayment: null,
+                paymentHistory: [],
             },
             teams: [
                 {
                     name: "Admins",
-                    id: teamId, 
+                    id: teamId,
+                    pubKey: orgData.teamPubKey, 
                     users: [
                         {
-                            username: token.claim.username
+                            id: orgData.userId,
+                            username: token.claim.username,
+                            role: "Admin",
+                            email: orgData.email, 
+                            name: orgData.email
                         }
-                    ],
-                    pubKey: orgData.teamPubKey
+                    ]
+                }
+            ],
+            users: [
+                {
+                    id: orgData.userId,
+                    username: token.claim.username, 
+                    name: orgData.name, 
+                    email: orgData.email, 
+                    isAdmin: true
                 }
             ]
         }
@@ -90,7 +105,7 @@ module.exports = {
                                 }
                                 resolve(success);
                                 client.close();
-                                newUser.postSignUp(orgData, token, teamId)
+                                //newUser.postSignUp(orgData, token, teamId)
                             }
                         }
                       });

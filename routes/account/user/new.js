@@ -1,94 +1,121 @@
 const MongoClient = require('mongodb').MongoClient;
-const date = require('../../getMonthDayYear');
 require('dotenv').config()
 
 const uri = process.env.MONGO_URI_PRO_ACCOUNTS_DEV;
 
 
 module.exports = {
-    postSignUp: function (signUpData, token, teamId) {
-        console.log("creating user...")
-        //Construct the account profile
-        const accountProfile = {
-            orgInfo: {
-                orgId: signUpData.orgId,
-                name: signUpData.organization,
-                creator: signUpData.blockstackId
-            },
-            profile: {
-                username: token.claim.username,
-                email: signUpData.email, 
-                pubKey: token.claim.pubKey
-            },
-            membershipTeams: [
-                {
-                    teamId, 
-                    name: signUpData.teamName ? signUpData.teamName : "Admins"
-                }
-            ]
-        }
-        //Need to post this data to Mongo
+    postNewUser: function (payload) {
+        console.log(payload.data.orgId);
+        console.log("creating user...");
+        const userObj = {
+            id: payload.data.id,
+            username: null,
+            isAdmin: payload.data.role === "Admin" ? true : false,
+            email: payload.data.email, 
+            name: payload.data.name
+        };
         let success = {};
         const mongoResponse = new Promise((resolve, reject) => {
             MongoClient.connect(uri, {useNewUrlParser: true}, function(err, client) {
                 if(err) {
                     success = {
                         success: false, 
-                        message: "Error occurred while connecting to MongoDB Atlas...\n"
+                        message: "Error occurred while connecting to DB...\n"
                     };
                     resolve(success);
-                    console.log('Error occurred while connecting to MongoDB Atlas...\n',err);
                 } else {
                     console.log('Connected...');
-                    const collection = client.db("graphite-docs-pro-accounts").collection("users");
+                    const collection = client.db("graphite-docs-pro-accounts").collection("organizations");
                     // Perform actions on the collection object
-                    //One: Check to see if the user is in the db
-                    collection.find({'accountProfile.signUpData.blockstackId': signUpData.blockstackId}).toArray(function(err, docs) {
+                    collection.updateOne({"orgProfile.orgId": payload.data.orgId}, {$push: {"orgProfile.users": userObj}}, function(err, res) {
                         if(err) {
-                            console.log(err)
                             success = {
                                 success: false, 
-                                err: err
+                                message: "Error",
+                                data: err
                             }
                             resolve(success);
                             client.close();
                         } else {
-                            if(docs.length > 0) {
-                                //If the user ID is found, we shoudn't add them
-                                console.log("Found the following records");
-                                console.log(docs);
-                                success = {
-                                    success: false, 
-                                    message: "User already exists"
-                                }
-                                resolve(success);
-                                client.close();
-                            } else {
-                                //No user yet, add them to the collection
-                                collection.insertOne({ 
-                                    accountProfile
-                                }, (err, result) => {
-                                    if(err) {
-                                        console.log(err);
-                                    } else {
-                                        console.log(result);
-                                    }
-                                })
-                                success = {
-                                    success: true, 
-                                    message: "Account created"
-                                }
-                                resolve(success);
-                                client.close();
+                            success = {
+                                success: true, 
+                                message: "User added"
                             }
+                            resolve(success);
+                            client.close();
+                            // const auditDetails = {
+                            //     username: token.claim.username, 
+                            //     date: new Date(), 
+                            //     actions: "Added new team", 
+                            //     data: data.team
+                            // }
+                            //audits.postAudit(auditDetails);
                         }
-                      });
+                    })
                 }
              });
+        });
+        return mongoResponse.then((success) => {
+            console.log(success);
+            return success;
         })
-      return mongoResponse.then((success) => {
-          console.log(success);
-          return success;
-      })
+    }, 
+    postToTeam: function(payload) {
+        console.log(payload.data.orgId);
+        console.log("creating user...");
+        const teamUserObj = {
+            id: payload.data.id,
+            username: null,
+            role: payload.data.role,
+            email: payload.data.email, 
+            name: payload.data.name, 
+            invitePending: true
+        };
+        let success = {};
+        const mongoResponse = new Promise((resolve, reject) => {
+            MongoClient.connect(uri, {useNewUrlParser: true}, function(err, client) {
+                if(err) {
+                    success = {
+                        success: false, 
+                        message: "Error occurred while connecting to DB...\n"
+                    };
+                    resolve(success);
+                } else {
+                    console.log('Connected...');
+                    const collection = client.db("graphite-docs-pro-accounts").collection("organizations");
+                    // Perform actions on the collection object
+                    collection.updateOne({"orgProfile.orgId": payload.data.orgId, "orgProfile.teams.id": payload.data.selectedTeam}, {$push: {"orgProfile.teams.$.users": teamUserObj}}, function(err, res) {
+                        if(err) {
+                            success = {
+                                success: false, 
+                                message: "Error",
+                                data: err
+                            }
+                            resolve(success);
+                            client.close();
+                        } else {
+                            success = {
+                                success: true, 
+                                message: "User added"
+                            }
+                            resolve(success);
+                            client.close();
+                            // const auditDetails = {
+                            //     username: token.claim.username, 
+                            //     date: new Date(), 
+                            //     actions: "Added new team", 
+                            //     data: data.team
+                            // }
+                            //audits.postAudit(auditDetails);
+                        }
+                    })
+                }
+             });
+        });
+        return mongoResponse.then((success) => {
+            console.log(success);
+            return success;
+        })
     }
 }

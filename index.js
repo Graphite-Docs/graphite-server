@@ -10,6 +10,8 @@ const getOrgAccount = require('./routes/account/org/fetch');
 //const orgAudit = require('./routes/audit/org/new');
 const updateOrg = require('./routes/account/org/update');
 const updateUser = require('./routes/account/user/update');
+const newDoc = require('./routes/account/docs/new');
+const teamDocs = require('./routes/account/docs/fetch');
 const email = require('./communication/email');
 const jwt = require('jsonwebtoken');
 const blockstack = require('blockstack');
@@ -144,6 +146,33 @@ app.post('/account/org/team', async(req, res, next) => {
   }
 })
 
+/*Documents*/
+
+app.post('/account/organization/:orgId/documents', async function(req, res) {
+  const headers = req.headers;
+  const decoded = jwt.decode(headers.authorization);
+  const pubKey = req.body.pubKey;
+  //At some point, need to check for API Key vs Bearer Token
+  if(req.body) {
+    try { 
+      const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
+      if(verify) {
+        const data = req.body;
+        const doc = await newDoc.postNewDoc(data);
+        console.log(doc);
+        res.send(doc);
+      } else {
+        res.send({data: "Invalid token"});
+      }
+    } catch(err) {
+      console.log(err);
+      res.send("Error posting document");
+    }
+  } else {
+    res.send("Error")
+  }
+})
+
 /*Emails*/
 
 app.post('/emails/invite', async (req, res, next) => {
@@ -215,7 +244,6 @@ app.get('/account/org/:orgId/user/:id', async (req, res, next) => {
 /*Org*/
 
 app.get('/account/org/:id', async (req, res, next) => {
-  console.log("here we go")
   const headers = req.headers;
   if(headers.authorization) {
     const decoded = jwt.decode(headers.authorization);
@@ -252,6 +280,39 @@ app.get('/account/org/:id', async (req, res, next) => {
     res.send("Bearer token not supplied");
   }
 })
+
+/* Documents */
+app.get('/account/organization/:orgId/documents/:teamId', async function(req, res) {
+  const headers = req.headers;
+  if(headers.authorization) {
+    const decoded = jwt.decode(headers.authorization);
+    if(req.body) {
+      try {
+        const pubKey = req.query.pubKey;
+        const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
+        if(verify) {
+          const orgId = req.params.orgId;
+          const teamId = req.params.teamId;
+          const docs = await teamDocs.fetchTeamDocs(orgId, teamId);
+          res.send(docs);
+        } else {
+          res.send("Invalid Auth Token")
+        }
+      } catch(err) {
+        console.log(err)
+        res.send("Invalid Token");
+      }
+    } else {
+      res.send("No params included");
+    }
+  } else {
+    res.send("No token provided");
+  }
+});
+
+app.get('/account/organization/:orgId/documents/:teamId/document/:id', function(req, res) {
+
+});
 
 //Puts
 

@@ -9,6 +9,7 @@ const getUserAccount = require('./routes/account/user/fetch');
 const getOrgAccount = require('./routes/account/org/fetch');
 //const orgAudit = require('./routes/audit/org/new');
 const updateOrg = require('./routes/account/org/update');
+const updateUser = require('./routes/account/user/update');
 const email = require('./communication/email');
 const jwt = require('jsonwebtoken');
 const blockstack = require('blockstack');
@@ -267,6 +268,7 @@ app.put('/account/org/name/:id', async(req, res, next) => {
       if(verify) {
         const data = req.body;
         const org = await updateOrg.updateOrgName(data, decoded);
+        console.log(org);
         res.send(org);
         //TODO: Need to come back and add in this security layer
         // const personData = await getUserAccount.fetchUser(username);
@@ -339,6 +341,36 @@ app.put('/account/org/team/:id', async(err, res) => {
     } else {
       res.send("Error")
     }
+  }
+})
+
+app.put('/account/organization/:orgId/user/:id', async (req, res, next) => {
+  const headers = req.headers;
+  const decoded = jwt.decode(headers.authorization);
+  const pubKey = req.body.pubKey;
+  const orgId = req.params.orgId;
+  const id = req.params.id;
+  //At some point, need to check for API Key vs Bearer Token
+  if(req.body) {
+    try { 
+      const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
+      if(verify) {
+        const payload = {
+          data: req.body,
+          token: decoded
+        }
+        //First we update the user model
+        const updatedUserModel = await updateUser.updateUserAccount(payload);
+        res.send(updatedUserModel);
+      } else {
+        res.send({data: "Invalid token"})
+      }
+    } catch(err) {
+      console.log(err)
+      res.send(err);
+    }
+  } else {
+    res.send("Error")
   }
 })
 

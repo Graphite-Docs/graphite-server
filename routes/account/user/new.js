@@ -1,4 +1,8 @@
 const MongoClient = require('mongodb').MongoClient;
+const mongoose = require('mongoose');
+const orgModel = require('../../../models/orgModel');
+const userModel = require('../../../models/userModel');
+const update = require('immutability-helper');
 require('dotenv').config()
 
 const uri = process.env.MONGO_URI_PRO_ACCOUNTS_DEV;
@@ -15,55 +19,48 @@ module.exports = {
             email: payload.data.email, 
             name: payload.data.name
         };
+
         let success = {};
         const mongoResponse = new Promise((resolve, reject) => {
-            MongoClient.connect(uri, {useNewUrlParser: true}, function(err, client) {
+            mongoose.connect(uri, {useNewUrlParser: true});
+        var db = mongoose.connection;
+        db.on('error', console.error.bind(console, 'connection error:'));
+        db.once('open', function() {
+            // var user = new userModel({
+            //     name: payload.data.name, 
+            //     id: payload.data.id, 
+            //     email: payload.data.email, 
+            //     username: null,
+            //     role: payload.data.role,
+            //     invitePending: true, 
+            //     teamId: teamId
+            // })
+            orgModel.update({orgId: payload.data.orgId}, { $push: {users: userObj} }, function(err, res){
                 if(err) {
                     success = {
                         success: false, 
-                        message: "Error occurred while connecting to DB...\n"
-                    };
+                        data: err
+                    }
                     resolve(success);
                 } else {
-                    console.log('Connected...');
-                    const collection = client.db("graphite-docs-pro-accounts").collection("organizations");
-                    // Perform actions on the collection object
-                    collection.updateOne({"orgProfile.orgId": payload.data.orgId}, {$push: {"orgProfile.users": userObj}}, function(err, res) {
-                        if(err) {
-                            success = {
-                                success: false, 
-                                message: "Error",
-                                data: err
-                            }
-                            resolve(success);
-                            client.close();
-                        } else {
-                            success = {
-                                success: true, 
-                                message: "User added"
-                            }
-                            resolve(success);
-                            client.close();
-                            // const auditDetails = {
-                            //     username: token.claim.username, 
-                            //     date: new Date(), 
-                            //     actions: "Added new team", 
-                            //     data: data.team
-                            // }
-                            //audits.postAudit(auditDetails);
-                        }
-                    })
+                    success = {
+                        success: true, 
+                        message: "User added to top-level user list"
+                    }
+                    resolve(success);
                 }
-             });
+            })
         });
+        })
+
         return mongoResponse.then((success) => {
             console.log(success);
             return success;
         })
     }, 
     postToTeam: function(payload) {
-        console.log(payload.data.orgId);
-        console.log("creating user...");
+        console.log("creating user within team...");
+        let updatedTeams = [];
         const teamUserObj = {
             id: payload.data.id,
             username: null,
@@ -74,45 +71,59 @@ module.exports = {
         };
         let success = {};
         const mongoResponse = new Promise((resolve, reject) => {
-            MongoClient.connect(uri, {useNewUrlParser: true}, function(err, client) {
+            mongoose.connect(uri, {useNewUrlParser: true});
+        var db = mongoose.connection;
+        db.on('error', console.error.bind(console, 'connection error:'));
+        db.once('open', async function() {
+            var user = new userModel({
+                name: payload.data.name, 
+                id: payload.data.id, 
+                email: payload.data.email, 
+                username: null,
+                role: payload.data.role,
+                invitePending: true, 
+                teamId: payload.data.selectedTeam
+            })
+            await orgModel.find({ orgId: payload.data.orgId }, async function(err, docs) {
+                if(err) {
+                    console.log(err);
+                } else {
+                    if(docs.length > 0) {
+                        const thisData = docs[0];
+                        const theseTeams = thisData.teams;
+                        const index = await theseTeams.map(x => {return x.id}).indexOf(payload.data.selectedTeam);
+                        const thisTeam = theseTeams[index];
+                        const teamUsers = thisTeam.users;
+                        teamUsers.push(user);
+                        thisTeam["users"] = teamUsers;
+                        updatedTeams = update(theseTeams, {$splice: [[index, 1, thisTeam]]});
+                    } else {
+                        console.log("No data found")
+                        success = {
+                            success: false, 
+                            message: "No data found"
+                        }
+                    }
+                }
+            })
+            orgModel.update({orgId: payload.data.orgId}, { $set: {teams: updatedTeams} }, function(err, res){
                 if(err) {
                     success = {
                         success: false, 
-                        message: "Error occurred while connecting to DB...\n"
-                    };
+                        data: err
+                    }
                     resolve(success);
                 } else {
-                    console.log('Connected...');
-                    const collection = client.db("graphite-docs-pro-accounts").collection("organizations");
-                    // Perform actions on the collection object
-                    collection.updateOne({"orgProfile.orgId": payload.data.orgId, "orgProfile.teams.id": payload.data.selectedTeam}, {$push: {"orgProfile.teams.$.users": teamUserObj}}, function(err, res) {
-                        if(err) {
-                            success = {
-                                success: false, 
-                                message: "Error",
-                                data: err
-                            }
-                            resolve(success);
-                            client.close();
-                        } else {
-                            success = {
-                                success: true, 
-                                message: "User added"
-                            }
-                            resolve(success);
-                            client.close();
-                            // const auditDetails = {
-                            //     username: token.claim.username, 
-                            //     date: new Date(), 
-                            //     actions: "Added new team", 
-                            //     data: data.team
-                            // }
-                            //audits.postAudit(auditDetails);
-                        }
-                    })
+                    success = {
+                        success: true, 
+                        message: "User added to top-level user list"
+                    }
+                    resolve(success);
                 }
-             });
+            })
         });
+        })
+
         return mongoResponse.then((success) => {
             console.log(success);
             return success;

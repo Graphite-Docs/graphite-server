@@ -8,28 +8,58 @@ module.exports = {
     postNewDoc: function(data) {
         let success = {};
         mongoose.connect(uri, {useNewUrlParser: true});
-            var db = mongoose.connection;
-            db.on('error', console.error.bind(console, 'connection error:'));
-            db.once('open', async function() {
-                let doc = new docModel({
-                    id: data.id,
-                    title: data.title, 
-                    teamName: data.teamName,
-                    orgId: data.orgId,
-                    teamId: data.teamId,
-                    lastUpdated: data.lastUpdated,
-                    timestamp: data.timestamp, 
-                    currentHostBucket: data.currentHostBucket
-                });
-                console.log(doc);
-                doc.save(function (err, doc) {
-                    if (err) return console.error(err);
-                    success = {
-                        success: true,
-                        data: doc
+        var db = mongoose.connection;
+        db.on('error', console.error.bind(console, 'connection error:'));
+        db.once('open', async function() {
+            //First check if the doc exists
+            const mongoResponse = new Promise((resolve, reject) => {
+                docModel.find({ id: data.id }, async function(err, docs) {
+                    if(err) {
+                        console.log(err);
+                    } else {
+                        console.log(docs);
+                        if(docs.length > 0) {
+                            //Need to update doc
+                            let thisDoc = docs[0];
+                            thisDoc.title = data.title;
+                            thisDoc.lastUpdated = data.lastUpdated;
+                            thisDoc.timestamp = data.timestamp;
+                            thisDoc.currentHostBucket = data.currentHostBucket;
+                            thisDoc.save();
+                            success = {
+                                success: true,
+                                message: "Document updated"
+                            }
+                            resolve(success);
+                        } else {
+                            let doc = new docModel({
+                                id: data.id,
+                                title: data.title, 
+                                teamName: data.teamName,
+                                orgId: data.orgId,
+                                teamId: data.teamId,
+                                lastUpdated: data.lastUpdated,
+                                timestamp: data.timestamp, 
+                                currentHostBucket: data.currentHostBucket
+                            });
+                            console.log(doc);
+                            doc.save(function (err, doc) {
+                                if (err) return console.error(err);
+                                success = {
+                                    success: true,
+                                    data: doc
+                                }
+                                console.log(doc)
+                                resolve(success);
+                              });
+                        }
                     }
-                    console.log(doc)
-                  });
+                    })
+                });
+                return mongoResponse.then((success) => {
+                    console.log(success);
+                    return success;
+                });
             });
     }
 }

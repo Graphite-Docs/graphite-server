@@ -13,7 +13,7 @@ module.exports = {
         db.once('open', async function() {
             //First check if the doc exists
             const mongoResponse = new Promise((resolve, reject) => {
-                docModel.find({ id: data.id }, async function(err, docs) {
+                docModel.find({ id: data.id, teamId: data.teamId }, async function(err, docs) {
                     if(err) {
                         console.log(err);
                     } else {

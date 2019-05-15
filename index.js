@@ -11,8 +11,10 @@ const getOrgAccount = require('./routes/account/org/fetch');
 const updateOrg = require('./routes/account/org/update');
 const updateUser = require('./routes/account/user/update');
 const newDoc = require('./routes/account/docs/new');
+const newFile = require('./routes/account/files/new');
 const teamDocs = require('./routes/account/docs/fetch');
 const email = require('./communication/email');
+const deletedDoc = require('./routes/account/docs/delete');
 const jwt = require('jsonwebtoken');
 const blockstack = require('blockstack');
 
@@ -167,6 +169,32 @@ app.post('/account/organization/:orgId/documents', async function(req, res) {
     } catch(err) {
       console.log(err);
       res.send("Error posting document");
+    }
+  } else {
+    res.send("Error")
+  }
+})
+
+/* Files */
+app.post('/account/organization/:orgId/files', async function(req, res) {
+  const headers = req.headers;
+  const decoded = jwt.decode(headers.authorization);
+  const pubKey = req.body.pubKey;
+  //At some point, need to check for API Key vs Bearer Token
+  if(req.body) {
+    try { 
+      const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
+      if(verify) {
+        const data = req.body;
+        const file = await newFile.postNewFile(data);
+        console.log(file);
+        res.send(file);
+      } else {
+        res.send({data: "Invalid token"});
+      }
+    } catch(err) {
+      console.log(err);
+      res.send("Error posting file");
     }
   } else {
     res.send("Error")
@@ -434,6 +462,43 @@ app.put('/account/organization/:orgId/user/:id', async (req, res, next) => {
     res.send("Error")
   }
 })
+
+// Deletes
+
+/*Users*/
+
+/*Documents*/
+app.delete('/account/organization/:orgId/teams/:teamId/documents/:docId', async function(req, res) {
+  const headers = req.headers;
+  const decoded = jwt.decode(headers.authorization);
+  const pubKey = req.query.pubKey;
+  const orgId = req.params.orgId;
+  const docId = req.params.docId;
+  const teamId = req.params.teamId;
+  //At some point, need to check for API Key vs Bearer Token
+  if(req.body) {
+    try { 
+      const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
+      if(verify) {
+        //Find and delete the document, thus removing access for the team
+        const payload = {
+          docId,
+          orgId,
+          teamId
+        }
+        const doc = await deletedDoc.delete(payload);
+        res.send(doc);
+      } else {
+        res.send({data: "Invalid token"})
+      }
+    } catch(err) {
+      console.log(err)
+      res.send(err);
+    }
+  } else {
+    res.send("Error")
+  }
+});
 
 // our server instance
 const server = http.createServer(app);

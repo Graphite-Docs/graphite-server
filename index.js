@@ -13,8 +13,10 @@ const updateUser = require('./routes/account/user/update');
 const newDoc = require('./routes/account/docs/new');
 const newFile = require('./routes/account/files/new');
 const teamDocs = require('./routes/account/docs/fetch');
+const teamFiles = require('./routes/account/files/fetch');
 const email = require('./communication/email');
 const deletedDoc = require('./routes/account/docs/delete');
+const deleteFile = require('./routes/account/files/delete');
 const jwt = require('jsonwebtoken');
 const blockstack = require('blockstack');
 
@@ -342,6 +344,35 @@ app.get('/account/organization/:orgId/documents/:teamId/document/:id', function(
 
 });
 
+/* Files */
+app.get('/account/organization/:orgId/files/:teamId', async function(req, res) {
+  const headers = req.headers;
+  if(headers.authorization) {
+    const decoded = jwt.decode(headers.authorization);
+    if(req.body) {
+      try {
+        const pubKey = req.query.pubKey;
+        const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
+        if(verify) {
+          const orgId = req.params.orgId;
+          const teamId = req.params.teamId;
+          const files = await teamFiles.fetchTeamFiles(orgId, teamId);
+          res.send(files);
+        } else {
+          res.send("Invalid Auth Token")
+        }
+      } catch(err) {
+        console.log(err)
+        res.send("Invalid Token");
+      }
+    } else {
+      res.send("No params included");
+    }
+  } else {
+    res.send("No token provided");
+  }
+});
+
 //Puts
 
 /*Org*/
@@ -488,6 +519,39 @@ app.delete('/account/organization/:orgId/teams/:teamId/documents/:docId', async 
         }
         const doc = await deletedDoc.delete(payload);
         res.send(doc);
+      } else {
+        res.send({data: "Invalid token"})
+      }
+    } catch(err) {
+      console.log(err)
+      res.send(err);
+    }
+  } else {
+    res.send("Error")
+  }
+});
+
+/* Files */
+app.delete('/account/organization/:orgId/teams/:teamId/files/:fileId', async function(req, res) {
+  const headers = req.headers;
+  const decoded = jwt.decode(headers.authorization);
+  const pubKey = req.query.pubKey;
+  const orgId = req.params.orgId;
+  const fileId = req.params.fileId;
+  const teamId = req.params.teamId;
+  //At some point, need to check for API Key vs Bearer Token
+  if(req.body) {
+    try { 
+      const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
+      if(verify) {
+        //Find and delete the document, thus removing access for the team
+        const payload = {
+          fileId,
+          orgId,
+          teamId
+        }
+        const file = await deleteFile.delete(payload);
+        res.send(file);
       } else {
         res.send({data: "Invalid token"})
       }

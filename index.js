@@ -17,6 +17,7 @@ const teamFiles = require('./routes/account/files/fetch');
 const email = require('./communication/email');
 const deletedDoc = require('./routes/account/docs/delete');
 const deleteFile = require('./routes/account/files/delete');
+const deleteUser = require('./routes/account/user/delete');
 const jwt = require('jsonwebtoken');
 const blockstack = require('blockstack');
 
@@ -497,6 +498,73 @@ app.put('/account/organization/:orgId/user/:id', async (req, res, next) => {
 // Deletes
 
 /*Users*/
+
+//This deletes a user from a particular team
+app.delete('/account/organization/:orgId/teams/:teamId/users/:userId', async function(req, res) {
+  const headers = req.headers;
+  const decoded = jwt.decode(headers.authorization);
+  console.log(decoded);
+  const pubKey = req.query.pubKey;
+  const orgId = req.params.orgId;
+  const userId = req.params.userId;
+  const teamId = req.params.teamId;
+  //At some point, need to check for API Key vs Bearer Token
+  if(req.body) {
+    try { 
+      const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
+      if(verify) {
+        //Find and delete the document, thus removing access for the team
+        const payload = {
+          userId,
+          orgId,
+          teamId,
+          requestingUser: decoded.claim.username
+        }
+        const user = await deleteUser.deleteFromTeam(payload);
+        res.send(user);
+      } else {
+        res.send({data: "Invalid token"})
+      }
+    } catch(err) {
+      console.log(err)
+      res.send(err);
+    }
+  } else {
+    res.send("Error")
+  }
+});
+
+//This deletes the user from the entire organization
+app.delete('/account/organization/:orgId/users/:userId', async function(req, res) {
+  const headers = req.headers;
+  const decoded = jwt.decode(headers.authorization);
+  const pubKey = req.query.pubKey;
+  const orgId = req.params.orgId;
+  const userId = req.params.userId;
+  //At some point, need to check for API Key vs Bearer Token
+  if(req.body) {
+    try { 
+      const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
+      if(verify) {
+        //Find and delete the document, thus removing access for the team
+        const payload = {
+          userId,
+          orgId,
+          requestingUser: decoded.claim.username
+        }
+        const user = await deleteUser.deleteFromOrg(payload);
+        res.send(user);
+      } else {
+        res.send({data: "Invalid token"})
+      }
+    } catch(err) {
+      console.log(err)
+      res.send(err);
+    }
+  } else {
+    res.send("Error")
+  }
+});
 
 /*Documents*/
 app.delete('/account/organization/:orgId/teams/:teamId/documents/:docId', async function(req, res) {

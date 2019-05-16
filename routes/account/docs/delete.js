@@ -25,39 +25,6 @@ module.exports = {
                     resolve(success);
                 }
               });
-            // docModel.find({ orgId: data.orgId, teamId: data.teamId, id: data.docId }, async function(err, docs) {
-            //     if(err) {
-            //         console.log(err);
-            //     } else {
-            //         console.log(docs);
-            //         if(docs.length > 0) {
-            //           //Now we delete it
-            //           //const thisDoc = docs[0];
-            //           docModel.deleteOne({ orgId: data.orgId, teamId: data.teamId, docId: data.docId }, async function(err, res) {
-            //             if(err) {
-            //                 success = {
-            //                     success: false,
-            //                     message: err
-            //                 }
-            //                 resolve(success);
-            //             } else {
-                            
-            //                 success = {
-            //                     success: true,
-            //                     message: "Document deleted"
-            //                 }
-            //                 resolve(success);
-            //             }
-            //           });
-            //         } else {
-            //             success = {
-            //                 success: false, 
-            //                 message: "No documents found"
-            //             }
-            //             resolve(success);
-            //         }
-            //     }
-            // })
         });
         return mongoResponse.then((success) => {
             console.log(success);

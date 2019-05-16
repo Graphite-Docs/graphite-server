@@ -26,15 +26,6 @@ module.exports = {
         var db = mongoose.connection;
         db.on('error', console.error.bind(console, 'connection error:'));
         db.once('open', function() {
-            // var user = new userModel({
-            //     name: payload.data.name, 
-            //     id: payload.data.id, 
-            //     email: payload.data.email, 
-            //     username: null,
-            //     role: payload.data.role,
-            //     invitePending: true, 
-            //     teamId: teamId
-            // })
             orgModel.update({orgId: payload.data.orgId}, { $push: {users: userObj} }, function(err, res){
                 if(err) {
                     success = {

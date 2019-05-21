@@ -221,10 +221,11 @@ app.post('/emails/invite', async (req, res, next) => {
         res.send({data: "Invalid token"});
       }
     } catch(err) {
+      console.log(err);
       res.send("Invalid Token");
     }
   } else {
-    res.send("Error")
+    res.send("Error");
   }
 })
 

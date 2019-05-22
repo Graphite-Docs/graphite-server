@@ -12,8 +12,10 @@ const updateOrg = require('./routes/account/org/update');
 const updateUser = require('./routes/account/user/update');
 const newDoc = require('./routes/account/docs/new');
 const newFile = require('./routes/account/files/new');
+const newForm = require('./routes/account/forms/new');
 const teamDocs = require('./routes/account/docs/fetch');
 const teamFiles = require('./routes/account/files/fetch');
+const teamForms = require('./routes/account/forms/fetch');
 const email = require('./communication/email');
 const deletedDoc = require('./routes/account/docs/delete');
 const deleteFile = require('./routes/account/files/delete');
@@ -204,6 +206,56 @@ app.post('/account/organization/:orgId/files', async function(req, res) {
   }
 })
 
+/*Forms*/
+app.post('/account/organization/:orgId/forms', async function(req, res) {
+  const headers = req.headers;
+  const decoded = jwt.decode(headers.authorization);
+  const pubKey = req.body.pubKey;
+  //At some point, need to check for API Key vs Bearer Token
+  if(req.body) {
+    try { 
+      const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
+      if(verify) {
+        const data = req.body;
+        const form = await newForm.postNewForm(data);
+        console.log(form);
+        res.send(form);
+      } else {
+        res.send({data: "Invalid token"});
+      }
+    } catch(err) {
+      console.log(err);
+      res.send("Error posting form");
+    }
+  } else {
+    res.send("Error")
+  }
+});
+
+app.post('/public/organization/:orgId/forms/:formId', async function(req, res) {
+  const orgId = req.params.orgId;
+  const formId = req.params.formId;
+  if(req.body) {
+    try {  
+        const data = req.body;
+        const payload = {
+          orgId, 
+          formId, 
+          responses: data
+        }
+        const formResponse = await newForm.postNewResponse(payload);
+        console.log(formResponse);
+        res.send(formResponse);
+    } catch(err) {
+      console.log(err);
+      res.send("Error posting response");
+    }
+  } else {
+    res.send("Error")
+  }
+});
+
+
 /*Emails*/
 
 app.post('/emails/invite', async (req, res, next) => {
@@ -372,6 +424,80 @@ app.get('/account/organization/:orgId/files/:teamId', async function(req, res) {
     }
   } else {
     res.send("No token provided");
+  }
+});
+
+/*Forms*/
+app.get('/account/organization/:orgId/teams/:teamId/forms', async function(req, res) {
+  const headers = req.headers;
+  if(headers.authorization) {
+    const decoded = jwt.decode(headers.authorization);
+    if(req.body) {
+      try {
+        const pubKey = req.query.pubKey;
+        const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
+        if(verify) {
+          const orgId = req.params.orgId;
+          const teamId = req.params.teamId;
+          const forms = await teamForms.fetchTeamForms(orgId, teamId);
+          res.send(forms);
+        } else {
+          res.send("Invalid Auth Token")
+        }
+      } catch(err) {
+        console.log(err)
+        res.send("Invalid Token");
+      }
+    } else {
+      res.send("No params included");
+    }
+  } else {
+    res.send("No token provided");
+  }
+});
+
+app.get('/public/organization/:orgId/forms/:formId', async function(req, res) {
+  const headers = req.headers;
+  if(headers.authorization) {
+    const decoded = jwt.decode(headers.authorization);
+    if(req.body) {
+      try {
+        const pubKey = req.query.pubKey;
+        const verify = blockstack.verifyProfileToken(headers.authorization, pubKey);
+        if(verify) {
+          const orgId = req.params.orgId;
+          const formId = req.params.formId;
+          const formResponses = await teamForms.fetchResponses(orgId, formId);
+          res.send(formResponses);
+        } else {
+          res.send("Invalid Auth Token")
+        }
+      } catch(err) {
+        console.log(err)
+        res.send("Invalid Token");
+      }
+    } else {
+      res.send("No params included");
+    }
+  } else {
+    res.send("No token provided");
+  }
+});
+
+app.get('/account/organization/:orgId/forms/:formId', async function(req, res) {
+  const headers = req.headers;
+  if(req.body) {
+    try {
+        const orgId = req.params.orgId;
+        const formId = req.params.formId;
+        const forms = await teamForms.fetchIndividualForm(orgId, formId);
+        res.send(forms);
+    } catch(err) {
+      console.log(err)
+      res.send("Error loading form");
+    }
+  } else {
+    res.send("No params included");
   }
 });
 

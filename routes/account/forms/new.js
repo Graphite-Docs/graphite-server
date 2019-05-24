@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const formModel = require('../../../models/formModel');
+const formResponseModel = require('../../../models/formResponseModel');
 require('dotenv').config();
 
 const uri = process.env.MONGO_URI_PRO_ACCOUNTS_DEV;
@@ -103,6 +104,66 @@ module.exports = {
                                 message: "Form not found"
                             }
                             resolve(success);
+                        }
+                    }
+                    })
+                });
+                return mongoResponse.then((success) => {
+                    console.log(success);
+                    return success;
+                });
+            });
+    }, 
+    postNewIndividualResponse: function(data) {
+        let success = {};
+        mongoose.connect(uri, {useNewUrlParser: true});
+        var db = mongoose.connection;
+        db.on('error', console.error.bind(console, 'connection error:'));
+        db.once('open', async function() {
+            //First check if the doc exists
+            const mongoResponse = new Promise((resolve, reject) => {
+                formResponseModel.find({ formId: data.formId }, async function(err, forms) {
+                    if(err) {
+                        console.log(err);
+                    } else {
+                        if(forms.length > 0) {
+                            console.log("Found form, adding responses")
+                            //Need to update doc
+                            let thisForm = forms[0];
+                            let responses = thisForm.responses;
+                            responses.push(data);
+                            thisForm.responses = responses;
+                            thisForm.save();
+                            success = {
+                                success: true,
+                                message: "Response posted"
+                            }
+                            resolve(success);
+                        } else {
+                            console.log("No form yet, creating and adding responses");
+                            let form = new formResponseModel({
+                                formId: data.formId,
+                                formTitle: data.formTitle, 
+                                responses: data,
+                                orgId: data.orgId
+                            });
+                            console.log(form);
+                            form.save(function (err, newResponse) {
+                                if(err) {
+                                    console.log(err);
+                                    success = {
+                                        success: false, 
+                                        message: err
+                                    }
+                                    resolve(success);
+                                } else {
+                                    success = {
+                                        success: true,
+                                        data: newResponse
+                                    }
+                                    resolve(success);
+                                }
+                              });
                         }
                     }
                     })

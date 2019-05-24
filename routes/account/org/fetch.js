@@ -34,13 +34,24 @@ module.exports = {
                                 //If the user ID is found, we shoudn't add them
                                 console.log("Found the following records");
                                 let orgDoc = docs[0];
-                                if(orgDoc.orgProfile.trialAccount.onTrial) {
+                                // if(orgDoc.orgProfile.trialAccount.onTrial) {
+                                //     const currentDate = Date.now();
+                                //     if(currentDate > orgDoc.orgProfile.trialAccount.trialEnd) {
+                                //         orgDoc.orgProfile.trialAccount["expired"] = true;
+                                //     } else {
+                                //         orgDoc.orgProfile.trialAccount["expired"] = false;
+                                //         orgDoc.orgProfile.trialAccount["timestamp"] = Date.now();
+                                //     }
+                                // }
+                                console.log("Boomtown")
+                                if(orgDoc.accountPlan.planType === "Trial") {
+                                    console.log("heyo")
                                     const currentDate = Date.now();
-                                    if(currentDate > orgDoc.orgProfile.trialAccount.trialEnd) {
-                                        orgDoc.orgProfile.trialAccount["expired"] = true;
+                                    if(currentDate > orgDoc.accountPlan.trialEnd) {
+                                        orgDoc.accountPlan.trialExpired["expired"] = true;
                                     } else {
-                                        orgDoc.orgProfile.trialAccount["expired"] = false;
-                                        orgDoc.orgProfile.trialAccount["timestamp"] = Date.now();
+                                        orgDoc.accountPlan.trialExpired = false;
+                                        orgDoc.accountPlan["timestamp"] = Date.now();
                                     }
                                 }
                                 success = {

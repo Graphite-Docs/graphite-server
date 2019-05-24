@@ -9,7 +9,6 @@ mongoose.connect(uri, {useNewUrlParser: true});
 
 module.exports = {
     fetchUser: function(data) {
-        console.log(data)
         let success = {};
         const mongoResponse = new Promise((resolve, reject) => {
             orgModel.find({ orgId: data.orgId }, async function(err, docs) {
@@ -18,19 +17,10 @@ module.exports = {
                 } else {
                     if(docs.length > 0) {
                         if(data.username) {
+
                             const modelToReturn = await clientModel.fetchModel(docs[0], data);
-                            if(modelToReturn.accountPlan) {
-                                if(modelToReturn.accountPlan.planType === "Trial") {
-                                    const currentDate = Date.now();
-                                    if(currentDate > modelToReturn.accountPlan.trialEnd) {
-                                        modelToReturn.accountPlan["trialExpired"] = await true;
-                                    } else {
-                                        modelToReturn.accountPlan["trialExpired"] = await false;
-                                        modelToReturn.accountPlan["timestamp"] = await Date.now();
-                                    }
-                                }
-                            }
-                            
+                            console.log("model");
+                            console.log(modelToReturn);
                             success = {
                                 success: true, 
                                 data: modelToReturn

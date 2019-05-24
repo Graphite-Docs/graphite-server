@@ -255,6 +255,24 @@ app.post('/public/organization/:orgId/forms/:formId', async function(req, res) {
   }
 });
 
+app.post('/public/organization/:orgId/forms/:formId/user/:userId', async function(req, res) {
+  const orgId = req.params.orgId;
+  const formId = req.params.formId;
+  if(req.body) {
+    try {  
+        const data = req.body;
+        const formResponse = await newForm.postNewIndividualResponse(data);
+        console.log(formResponse);
+        res.send(formResponse);
+    } catch(err) {
+      console.log(err);
+      res.send("Error posting response");
+    }
+  } else {
+    res.send("Error")
+  }
+});
+
 
 /*Emails*/
 
@@ -456,7 +474,7 @@ app.get('/account/organization/:orgId/teams/:teamId/forms', async function(req, 
   }
 });
 
-app.get('/public/organization/:orgId/forms/:formId', async function(req, res) {
+app.get('/account/organization/:orgId/forms/:formId', async function(req, res) {
   const headers = req.headers;
   if(headers.authorization) {
     const decoded = jwt.decode(headers.authorization);
@@ -484,7 +502,7 @@ app.get('/public/organization/:orgId/forms/:formId', async function(req, res) {
   }
 });
 
-app.get('/account/organization/:orgId/forms/:formId', async function(req, res) {
+app.get('/public/organization/:orgId/forms/:formId', async function(req, res) {
   const headers = req.headers;
   if(req.body) {
     try {
@@ -495,6 +513,24 @@ app.get('/account/organization/:orgId/forms/:formId', async function(req, res) {
     } catch(err) {
       console.log(err)
       res.send("Error loading form");
+    }
+  } else {
+    res.send("No params included");
+  }
+});
+
+app.get('/public/forms/:formId/user/:userId', async function(req, res) {
+  const headers = req.headers;
+  if(req.body) {
+    try {
+        const orgId = req.params.orgId;
+        const formId = req.params.formId;
+        const userId = req.params.userId;
+        const responses = await teamForms.fetchIndividualResponses(orgId, formId, userId);
+        res.send(responses);
+    } catch(err) {
+      console.log(err)
+      res.send("Error loading responses");
     }
   } else {
     res.send("No params included");

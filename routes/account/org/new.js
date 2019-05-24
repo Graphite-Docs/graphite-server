@@ -66,6 +66,7 @@ module.exports = {
             });
         org.save(function (err, org) {
             if (err) return console.error(err);
+            mongoose.disconnect();
             console.log(org)
           });
         });

@@ -58,6 +58,7 @@ module.exports = {
                 });
                 return mongoResponse.then((success) => {
                     console.log(success);
+                    mongoose.disconnect();
                     return success;
                 });
             });

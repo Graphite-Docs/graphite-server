@@ -50,6 +50,7 @@ module.exports = {
              });
         });
         return mongoResponse.then((success) => {
+            mongoose.disconnect();
             console.log(success);
             return success;
         })
@@ -101,6 +102,7 @@ module.exports = {
              });
         });
         return mongoResponse.then((success) => {
+            mongoose.disconnect();
             console.log(success);
             return success;
         })
@@ -174,6 +176,7 @@ module.exports = {
         })
 
         return mongoResponse.then((success) => {
+            mongoose.disconnect();
             console.log(success);
             return success;
         })

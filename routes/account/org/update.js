@@ -11,9 +11,6 @@ module.exports = {
         let success = {};
         const mongoResponse = new Promise((resolve, reject) => {
             //mongoose.connect(uri, {useNewUrlParser: true});
-            var db = mongoose.connection;
-            db.on('error', console.error.bind(console, 'connection error:'));
-            db.once('open', function() {
                 orgModel.findOneAndUpdate({orgId: data.orgId}, { name: data.orgName }, {new: true}, function(err, res){
                     if(err) {
                         console.log(err);
@@ -31,7 +28,6 @@ module.exports = {
                         resolve(success);
                     }
                 })
-            });
         });
 
         return mongoResponse.then((success) => {
@@ -45,8 +41,6 @@ module.exports = {
         const mongoResponse = new Promise((resolve, reject) => {
             //mongoose.connect(uri, {useNewUrlParser: true});
             var db = mongoose.connection;
-            db.on('error', console.error.bind(console, 'connection error:'));
-            db.once('open', function() {
                 orgModel.update({orgId: data.orgId}, { $push: {teams: data.team} }, function(err, res){
                     if(err) {
                         console.log(err);
@@ -64,7 +58,6 @@ module.exports = {
                         resolve(success);
                     }
                 })
-            });
         });
 
         return mongoResponse.then((success) => {

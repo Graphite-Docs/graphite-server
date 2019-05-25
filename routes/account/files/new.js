@@ -9,9 +9,6 @@ module.exports = {
     postNewFile: function(data) {
         let success = {};
         //mongoose.connect(uri, {useNewUrlParser: true});
-        var db = mongoose.connection;
-        db.on('error', console.error.bind(console, 'connection error:'));
-        db.once('open', async function() {
             //First check if the doc exists
             const mongoResponse = new Promise((resolve, reject) => {
                 fileModel.find({ id: data.id, teamId: data.teamId }, async function(err, files) {
@@ -71,6 +68,5 @@ module.exports = {
                     console.log(success);
                     return success;
                 });
-            });
     }
 }

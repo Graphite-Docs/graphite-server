@@ -23,9 +23,6 @@ module.exports = {
         let success = {};
         const mongoResponse = new Promise((resolve, reject) => {
             //mongoose.connect(uri, {useNewUrlParser: true});
-        var db = mongoose.connection;
-        db.on('error', console.error.bind(console, 'connection error:'));
-        db.once('open', function() {
             orgModel.update({orgId: payload.data.orgId}, { $push: {users: userObj} }, function(err, res){
                 if(err) {
                     success = {
@@ -41,7 +38,6 @@ module.exports = {
                     resolve(success);
                 }
             })
-        });
         })
 
         return mongoResponse.then((success) => {
@@ -62,11 +58,8 @@ module.exports = {
             invitePending: true
         };
         let success = {};
-        const mongoResponse = new Promise((resolve, reject) => {
+        const mongoResponse = new Promise(async (resolve, reject) => {
             //mongoose.connect(uri, {useNewUrlParser: true});
-        var db = mongoose.connection;
-        db.on('error', console.error.bind(console, 'connection error:'));
-        db.once('open', async function() {
             var user = new userModel({
                 name: payload.data.name, 
                 id: payload.data.id, 
@@ -113,7 +106,6 @@ module.exports = {
                     resolve(success);
                 }
             })
-        });
         })
 
         return mongoResponse.then((success) => {

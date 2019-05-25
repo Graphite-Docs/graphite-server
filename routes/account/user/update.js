@@ -112,11 +112,8 @@ module.exports = {
         let teams;
         let users;
         let success = {};
-        const mongoResponse = new Promise((resolve, reject) => {
+        const mongoResponse = new Promise(async (resolve, reject) => {
             //mongoose.connect(uri, {useNewUrlParser: true});
-            var db = mongoose.connection;
-            db.on('error', console.error.bind(console, 'connection error:'));
-            db.once('open', async function() {
                 await orgModel.find({ orgId: payload.data.orgId }, async function(err, docs) {
                     if(err) {
                         console.log(err);
@@ -172,7 +169,6 @@ module.exports = {
                         }
                     }
                 })
-            });
         })
 
         return mongoResponse.then((success) => {

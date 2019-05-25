@@ -17,9 +17,6 @@ module.exports = {
         //Need to post this data to Mongo or Gaia
         let success = {};
         //mongoose.connect(uri, {useNewUrlParser: true});
-        var db = mongoose.connection;
-        db.on('error', console.error.bind(console, 'connection error:'));
-        db.once('open', function() {
             var user = new userModel({
                 name: orgData.name, 
                 id: orgData.userId, 
@@ -70,7 +67,6 @@ module.exports = {
             //mongoose.disconnect();
             console.log(org)
           });
-        });
         // const mongoResponse = new Promise((resolve, reject) => {
             // MongoClient.connect(uri, {useNewUrlParser: true}, function(err, client) {
             //     if(err) {

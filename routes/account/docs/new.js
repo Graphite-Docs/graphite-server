@@ -10,9 +10,6 @@ module.exports = {
         //mongoose.connect(uri, {useNewUrlParser: true});
         let success = {};
         //mongoose.connect(uri, {useNewUrlParser: true});
-        var db = mongoose.connection;
-        db.on('error', console.error.bind(console, 'connection error:'));
-        db.once('open', async function() {
             //First check if the doc exists
             const mongoResponse = new Promise((resolve, reject) => {
                 docModel.find({ id: data.id, teamId: data.teamId }, async function(err, docs) {
@@ -63,6 +60,5 @@ module.exports = {
                     //mongoose.disconnect();
                     return success;
                 });
-            });
     }
 }

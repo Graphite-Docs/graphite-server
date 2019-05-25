@@ -10,9 +10,6 @@ module.exports = {
         let success = {};
         const mongoResponse = new Promise(async (resolve, reject) => {
             //mongoose.connect(uri, {useNewUrlParser: true});
-            var db = mongoose.connection;
-            db.on('error', console.error.bind(console, 'connection error:'));
-            db.once('open', async function() {
                 //Need to first verify that the requesting user is an admin or manager on team
             let doc = await orgModel.findOne({ orgId: data.orgId });
             console.log(doc.teams);
@@ -58,7 +55,6 @@ module.exports = {
                     resolve(success);
                 }
             }
-            });
         });
         return mongoResponse.then((success) => {
             //mongoose.disconnect();
@@ -72,9 +68,6 @@ module.exports = {
         let doc;
         const mongoResponse = new Promise(async (resolve, reject) => {
             //mongoose.connect(uri, {useNewUrlParser: true});
-            var db = mongoose.connection;
-            db.on('error', console.error.bind(console, 'connection error:'));
-            db.once('open', async function() {
                 //Need to first verify that the requesting user is an admin or manager on team
             doc = await orgModel.findOne({ orgId: data.orgId });
             
@@ -137,7 +130,6 @@ module.exports = {
                     }
                 });
             }
-            });
         });
         return mongoResponse.then((success) => {
             //mongoose.disconnect();

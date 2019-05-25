@@ -22,8 +22,10 @@ const deleteFile = require('./routes/account/files/delete');
 const deleteUser = require('./routes/account/user/delete');
 const jwt = require('jsonwebtoken');
 const blockstack = require('blockstack');
+const mongoose = require('mongoose');
 
 require('dotenv').config();
+const uri = process.env.MONGO_URI_PRO_ACCOUNTS_DEV;
 const port = process.env.REACT_APP_SERVER || 5000;
 
 const app = express();
@@ -828,4 +830,7 @@ io.on("connection", socket => {
   });
 });
 
-server.listen(process.env.PORT || 5000, () => console.log(`Listening on port ${port}`));
+server.listen(process.env.PORT || 5000, () => {
+  console.log(`Listening on port ${port}`);
+  mongoose.connect(uri, {useNewUrlParser: true});
+});

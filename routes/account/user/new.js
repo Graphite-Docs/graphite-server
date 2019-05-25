@@ -22,7 +22,7 @@ module.exports = {
 
         let success = {};
         const mongoResponse = new Promise((resolve, reject) => {
-            mongoose.connect(uri, {useNewUrlParser: true});
+            //mongoose.connect(uri, {useNewUrlParser: true});
         var db = mongoose.connection;
         db.on('error', console.error.bind(console, 'connection error:'));
         db.once('open', function() {
@@ -63,7 +63,7 @@ module.exports = {
         };
         let success = {};
         const mongoResponse = new Promise((resolve, reject) => {
-            mongoose.connect(uri, {useNewUrlParser: true});
+            //mongoose.connect(uri, {useNewUrlParser: true});
         var db = mongoose.connection;
         db.on('error', console.error.bind(console, 'connection error:'));
         db.once('open', async function() {
@@ -117,7 +117,7 @@ module.exports = {
         })
 
         return mongoResponse.then((success) => {
-            mongoose.disconnect();
+            //mongoose.disconnect();
             console.log(success);
             return success;
         })

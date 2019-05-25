@@ -12,10 +12,11 @@ const uri = process.env.MONGO_URI_PRO_ACCOUNTS_DEV;
 
 module.exports = {
     postSignUp: function (orgData, token) {
+        //mongoose.connect(uri, {useNewUrlParser: true});
         const teamId = uuid();
         //Need to post this data to Mongo or Gaia
         let success = {};
-        mongoose.connect(uri, {useNewUrlParser: true});
+        //mongoose.connect(uri, {useNewUrlParser: true});
         var db = mongoose.connection;
         db.on('error', console.error.bind(console, 'connection error:'));
         db.once('open', function() {
@@ -66,7 +67,7 @@ module.exports = {
             });
         org.save(function (err, org) {
             if (err) return console.error(err);
-            mongoose.disconnect();
+            //mongoose.disconnect();
             console.log(org)
           });
         });

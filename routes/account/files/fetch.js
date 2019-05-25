@@ -6,6 +6,7 @@ const uri = process.env.MONGO_URI_PRO_ACCOUNTS_DEV;
 module.exports = {
     fetchTeamFiles: function(orgId, teamId) {
         let success = {};
+        mongoose.connect(uri, {useNewUrlParser: true});
         const mongoResponse = new Promise((resolve, reject) => {
             fileModel.find({ orgId: orgId, teamId: teamId }, async function(err, files) {
                 if(err) {
@@ -29,7 +30,7 @@ module.exports = {
             })
         });
         return mongoResponse.then((success) => {
-            mongoose.disconnect();
+            //mongoose.disconnect();
             console.log(success);
             return success;
         });

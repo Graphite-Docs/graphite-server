@@ -3,11 +3,13 @@ const docModel = require('../../../models/documentModel');
 require('dotenv').config();
 
 const uri = process.env.MONGO_URI_PRO_ACCOUNTS_DEV;
+//mongoose.connect(uri, {useNewUrlParser: true});
 
 module.exports = {
     postNewDoc: function(data) {
+        //mongoose.connect(uri, {useNewUrlParser: true});
         let success = {};
-        mongoose.connect(uri, {useNewUrlParser: true});
+        //mongoose.connect(uri, {useNewUrlParser: true});
         var db = mongoose.connection;
         db.on('error', console.error.bind(console, 'connection error:'));
         db.once('open', async function() {
@@ -58,7 +60,7 @@ module.exports = {
                 });
                 return mongoResponse.then((success) => {
                     console.log(success);
-                    mongoose.disconnect();
+                    //mongoose.disconnect();
                     return success;
                 });
             });

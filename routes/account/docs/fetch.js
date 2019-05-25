@@ -2,9 +2,11 @@ const mongoose = require('mongoose');
 const docModel = require('../../../models/documentModel');
 require('dotenv').config()
 const uri = process.env.MONGO_URI_PRO_ACCOUNTS_DEV;
+//mongoose.connect(uri, {useNewUrlParser: true});
 
 module.exports = {
     fetchTeamDocs: function(orgId, teamId) {
+        //mongoose.connect(uri, {useNewUrlParser: true});
         let success = {};
         const mongoResponse = new Promise((resolve, reject) => {
             docModel.find({ orgId: orgId, teamId: teamId }, async function(err, docs) {
@@ -29,7 +31,7 @@ module.exports = {
             })
         });
         return mongoResponse.then((success) => {
-            mongoose.disconnect();
+            //mongoose.disconnect();
             console.log(success);
             return success;
         });

@@ -5,11 +5,12 @@ const clientModel = require('../../../models/orgClientModel');
 require('dotenv').config()
 
 const uri = process.env.MONGO_URI_PRO_ACCOUNTS_DEV;
-mongoose.connect(uri, {useNewUrlParser: true});
+//mongoose.connect(uri, {useNewUrlParser: true});
 
 module.exports = {
     fetchUser: function(data) {
         let success = {};
+        //mongoose.connect(uri, {useNewUrlParser: true});
         const mongoResponse = new Promise((resolve, reject) => {
             orgModel.find({ orgId: data.orgId }, async function(err, docs) {
                 if(err) {
@@ -31,6 +32,7 @@ module.exports = {
                                 success: false, 
                                 message: "No username set yet"
                             }
+                            resolve(success);
                         }
                     } else {
                         success = {
@@ -43,7 +45,7 @@ module.exports = {
             })
         });
         return mongoResponse.then((success) => {
-            mongoose.disconnect();
+            //mongoose.disconnect();
             console.log(success);
             return success;
         });
@@ -177,7 +179,7 @@ module.exports = {
              });
         })
         return mongoResponse.then((success) => {
-          mongoose.disconnect();
+          //mongoose.disconnect();
           console.log(success);
           return success;
         })

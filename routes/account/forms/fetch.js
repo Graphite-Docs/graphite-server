@@ -4,9 +4,11 @@ const formResponseModel = require('../../../models/formResponseModel');
 require('dotenv').config()
 const uri = process.env.MONGO_URI_PRO_ACCOUNTS_DEV;
 
+
 module.exports = {
     fetchTeamForms: function(orgId, teamId) {
         let success = {};
+        //mongoose.connect(uri, {useNewUrlParser: true});
         const mongoResponse = new Promise((resolve, reject) => {
             formModel.find({ orgId: orgId, teamId: teamId }, async function(err, forms) {
                 if(err) {
@@ -30,12 +32,13 @@ module.exports = {
             })
         });
         return mongoResponse.then((success) => {
-            mongoose.disconnect();
+            ////mongoose.disconnect();
             console.log(success);
             return success;
         });
     }, 
     fetchIndividualForm: function(orgId, formId) {
+        //mongoose.connect(uri, {useNewUrlParser: true});
         console.log("form id");
         console.log(formId);
         let success = {};
@@ -70,7 +73,7 @@ module.exports = {
             })
         });
         return mongoResponse.then((success) => {
-            mongoose.disconnect();
+            //mongoose.disconnect();
             console.log(success);
             return success;
         });
@@ -111,7 +114,7 @@ module.exports = {
             })
         });
         return mongoResponse.then((success) => {
-            mongoose.disconnect();
+            //mongoose.disconnect();
             console.log(success);
             return success;
         });
@@ -151,7 +154,7 @@ module.exports = {
             })
         });
         return mongoResponse.then((success) => {
-            mongoose.disconnect();
+            //mongoose.disconnect();
             console.log(success);
             return success;
         });

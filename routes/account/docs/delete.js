@@ -2,9 +2,11 @@ const mongoose = require('mongoose');
 const docModel = require('../../../models/documentModel');
 require('dotenv').config()
 const uri = process.env.MONGO_URI_PRO_ACCOUNTS_DEV;
+////mongoose.connect(uri, {useNewUrlParser: true});
 
 module.exports = {
     delete: function(data) {
+        ////mongoose.connect(uri, {useNewUrlParser: true});
         console.log(data);
         let success = {};
         const mongoResponse = new Promise((resolve, reject) => {
@@ -28,7 +30,7 @@ module.exports = {
         });
         return mongoResponse.then((success) => {
             console.log(success);
-            mongoose.disconnect();
+            //mongoose.disconnect();
             return success;
         });
     }

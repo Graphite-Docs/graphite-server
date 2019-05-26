@@ -47,6 +47,7 @@ module.exports = {
         })
     }, 
     postToTeam: function(payload) {
+        console.log(payload);
         console.log("creating user within team...");
         let updatedTeams = [];
         const teamUserObj = {
@@ -77,11 +78,20 @@ module.exports = {
                         const thisData = docs[0];
                         const theseTeams = thisData.teams;
                         const index = await theseTeams.map(x => {return x.id}).indexOf(payload.data.selectedTeam);
-                        const thisTeam = theseTeams[index];
-                        const teamUsers = thisTeam.users;
-                        teamUsers.push(user);
-                        thisTeam["users"] = teamUsers;
-                        updatedTeams = update(theseTeams, {$splice: [[index, 1, thisTeam]]});
+                        if(index > -1) {
+                            const thisTeam = theseTeams[index];
+                            const teamUsers = thisTeam.users;
+                            teamUsers.push(user);
+                            thisTeam["users"] = teamUsers;
+                            updatedTeams = update(theseTeams, {$splice: [[index, 1, thisTeam]]});
+                        } else {
+                            success = {
+                                success: false, 
+                                message: "Error with team index"
+                            }
+                            resolve(success)
+                        }
+                        
                     } else {
                         console.log("No data found")
                         success = {
@@ -91,21 +101,29 @@ module.exports = {
                     }
                 }
             })
-            orgModel.update({orgId: payload.data.orgId}, { $set: {teams: updatedTeams} }, function(err, res){
-                if(err) {
-                    success = {
-                        success: false, 
-                        data: err
+            if(updatedTeams > 0 ) {
+                orgModel.update({orgId: payload.data.orgId}, { $set: {teams: updatedTeams} }, function(err, res){
+                    if(err) {
+                        success = {
+                            success: false, 
+                            data: err
+                        }
+                        resolve(success);
+                    } else {
+                        success = {
+                            success: true, 
+                            message: "User added to top-level user list"
+                        }
+                        resolve(success);
                     }
-                    resolve(success);
-                } else {
-                    success = {
-                        success: true, 
-                        message: "User added to top-level user list"
-                    }
-                    resolve(success);
+                })
+            } else {
+                success = {
+                    success: false, 
+                    message: "Teams array empty"
                 }
-            })
+                resolve(success);
+            }
         })
 
         return mongoResponse.then((success) => {

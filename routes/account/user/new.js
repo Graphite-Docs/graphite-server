@@ -41,7 +41,7 @@ module.exports = {
         })
 
         return mongoResponse.then((success) => {
-            mongoose.disconnect();
+            //mongoose.disconnect();
             console.log(success);
             return success;
         })

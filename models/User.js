@@ -25,6 +25,14 @@ const UserSchema = new mongoose.Schema({
   attempts: {
     type: Number
   },
+  organizations: [
+    {
+      organization: {
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'organization'
+      }
+    }
+  ],
   date: {
     type: Date, 
     default: Date.now

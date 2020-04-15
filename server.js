@@ -20,12 +20,9 @@ app.use(express.json({ limit: CONTENT_LENGTH_LIMIT, extended: true }));
 app.get("/", (req, res) => res.send("API Running"));
 
 //  Define Routes
-// app.use('/api/v1/users', require('./routes/v1/users'));
 app.use("/v1/auth", require("./routes/v1/auth"));
 app.use("/v1/documents", require("./routes/v1/docs"));
-// app.use('/api/v1/profile', require('./routes/v1/profile'));
-// app.use('/api/v1/submissions', require('./routes/v1/submissions'));
-// app.use('/api/v1/uploads', require('./routes/v1/uploads'));
+app.use("/v1/organizations", require("./routes/v1/orgs"));
 
 const PORT = process.env.PORT || 5000;
 

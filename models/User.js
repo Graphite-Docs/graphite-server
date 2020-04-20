@@ -10,6 +10,11 @@ const UserSchema = new mongoose.Schema({
     required: true, 
     unique: true
   },
+  subscription: {
+    type: Boolean, 
+    required: true, 
+    default: false
+  },
   authCheckEncrypted: {
     type: String
   },

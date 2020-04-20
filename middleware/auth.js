@@ -13,6 +13,10 @@ module.exports = async function(req, res, next) {
   try {
     const decoded = await jwt.verify(token, config.get('jwtSecret'));
 
+    const { exp } = decoded;
+    if (Date.now() >= exp * 1000) {
+      return res.status(401).json({ msg: 'Invalid token' });
+    }
     //  Decoded token has a user key, return that to the request
     req.user = decoded.user;
     next();

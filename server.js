@@ -14,6 +14,10 @@ app.use(cookieParser());
 //  Connect Database
 connectDB(config.get("environment"));
 
+//  Stripe payment route requires raw unparsed body. So, we have to use it here 
+//  Before the bodyparser middleware. See more here: https://github.com/stripe/stripe-node/issues/356
+app.use("/v1/payment", require("./routes/v1/payment"));
+
 //  Init Middleware
 app.use(express.json({ limit: CONTENT_LENGTH_LIMIT, extended: true }));
 

@@ -11,6 +11,25 @@ sgMail.setApiKey(config.get("SENGRID_API_KEY"));
 const { check, validationResult } = require("express-validator");
 const User = require("../../models/User");
 
+//  @route  GET v1/auth/verifyPayment/:user_id
+//  @desc   Gets a specific user and verifies their current payment status
+//  @access Private
+
+router.get('/verifyPayment/:user_id', auth, async (req, res) => {
+  try {
+    if(req.user.id !== req.params.user_id) {
+      return res.status(401).json({ msg: 'User not authorized' });
+    }
+
+    const user = await User.findById(req.user.id);
+    
+    res.json({payment: user.subscription});
+  } catch (error) {
+    console.log(error);
+    res.status(500).send('Server error');
+  }
+});
+
 //  @route  POST v1/auth/register
 //  @desc   Register user and generate a jwt with authData to encrypt
 //  @access Public
@@ -47,6 +66,7 @@ router.post(
           user: {
             id: user.id,
             email: user.email,
+            subscription: user.subscription,
             data: user.authCheckDecrypted,
           },
         };
@@ -92,6 +112,7 @@ router.post(
           name,
           email,
           authCheckDecrypted,
+          subscription: false
         });
 
         //  Save user to DB
@@ -100,8 +121,10 @@ router.post(
         const payload = {
           user: {
             id: user.id,
-            email: user.email,
+            email: email,
+            name,
             data: user.authCheckDecrypted,
+            subscription: false
           },
         };
 
@@ -185,13 +208,17 @@ router.post(
       user["authCheckEncrypted"] = data;
       user["publicKey"] = publicKey;
       user["privateKey"] = privateKey;
+      user['subscription'] = false;
 
       await user.save();
 
       const payload = {
         user: {
           id: req.user.id,
+          email: user.email,
+          name: user.name,
           authenticated: true,
+          subscription: false
         },
       };
 
@@ -245,6 +272,8 @@ router.post(
           user: {
             id: user.id,
             email: user.email,
+            name: user.name,
+            subscription: user.subscription,
             data: user.authCheckDecrypted,
           },
         };
@@ -269,6 +298,8 @@ router.post(
         user: {
           id: user.id,
           email: user.email,
+          name: user.name,
+          subscription: user.subscription,
           data: user.authCheckEncrypted,
         },
       };
@@ -341,7 +372,10 @@ router.post(
       const payload = {
         user: {
           id: req.user.id,
+          email: user.email,
+          name: user.name,
           authenticated: true,
+          subscription: user.subscription,
           publicKey: user.publicKey,
           privateKey: user.privateKey,
         },

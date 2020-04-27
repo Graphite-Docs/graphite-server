@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const config = require("config");
-const stripe = require("stripe")("sk_test_MltJxihP6snGZ7ex55clkxpO");
+const stripe = require("stripe")(config.get("stripe_secret_test"));
 const endpointSecret = config.get("endpointSecret");
 const rawBodyMiddleware = require("../../middleware/rawBody");
 const User = require("../../models/User");
@@ -28,7 +28,8 @@ router.post("/", rawBodyMiddleware, async (request, response) => {
     //  This is the user ID. Important because a payment might be made under a different email
     const { client_reference_id } = session;
     const user = await User.findById(client_reference_id);
-    user.subscription = true;
+
+    user['subscription'] = true;
     await user.save();
   }
 

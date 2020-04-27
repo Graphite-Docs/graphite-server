@@ -378,6 +378,7 @@ router.post(
           subscription: user.subscription,
           publicKey: user.publicKey,
           privateKey: user.privateKey,
+          avatar: user.avatar
         },
       };
 

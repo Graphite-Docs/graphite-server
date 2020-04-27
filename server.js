@@ -1,5 +1,6 @@
 const express = require("express");
 const connectDB = require("./config/db");
+const fileUpload = require('express-fileupload');
 const config = require("config");
 const CONTENT_LENGTH_LIMIT = "10mb";
 
@@ -8,7 +9,7 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 
 app.use(cors());
-
+app.use(fileUpload());
 app.use(cookieParser());
 
 //  Connect Database
@@ -27,6 +28,7 @@ app.get("/", (req, res) => res.send("API Running"));
 app.use("/v1/auth", require("./routes/v1/auth"));
 app.use("/v1/documents", require("./routes/v1/docs"));
 app.use("/v1/organizations", require("./routes/v1/orgs"));
+app.use("/v1/profile", require("./routes/v1/profile"));
 
 const PORT = process.env.PORT || 5000;
 

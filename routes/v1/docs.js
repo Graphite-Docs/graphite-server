@@ -17,7 +17,6 @@ const User = require("../../models/User");
 //  @desc   Get all documents for a specific user
 //  @access Private
 router.get("/", auth, async (req, res) => {
-  console.log(req.headers);
   try {
     const allDocuments = await Document.find().sort({ date: -1 });
 

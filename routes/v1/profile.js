@@ -46,7 +46,19 @@ router.put(
 
         user['avatar'] = data.Location;
         await user.save();
-        res.json(user);
+        const payload = {
+          user: {
+            id: req.user.id,
+            email: user.email,
+            name: user.name,
+            authenticated: true,
+            subscription: user.subscription,
+            publicKey: user.publicKey,
+            privateKey: user.privateKey,
+            avatar: user.avatar
+          },
+        };
+        res.json(payload);
       });
     } catch (error) {
       console.log(error);

@@ -18,6 +18,17 @@ const UserSchema = new mongoose.Schema({
     required: true, 
     default: false
   },
+  subscriptionType: {
+    type: String, 
+    required: true, 
+    default: 'personal'
+  },
+  paymentCustomerId: {
+    type: String
+  },
+  subscriptionEndDate: {
+    type: Number
+  }, 
   authCheckEncrypted: {
     type: String
   },

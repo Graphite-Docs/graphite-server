@@ -15,18 +15,46 @@ const User = require("../../models/User");
 //  @desc   Gets a specific user and verifies their current payment status
 //  @access Private
 
-router.get('/verifyPayment/:user_id', auth, async (req, res) => {
+router.get("/verifyPayment/:user_id", auth, async (req, res) => {
   try {
-    if(req.user.id !== req.params.user_id) {
-      return res.status(401).json({ msg: 'User not authorized' });
+    if (req.user.id !== req.params.user_id) {
+      return res.status(401).json({ msg: "User not authorized" });
     }
 
     const user = await User.findById(req.user.id);
-    
-    res.json({payment: user.subscription});
+
+    res.json({ payment: user.subscription });
   } catch (error) {
     console.log(error);
-    res.status(500).send('Server error');
+    res.status(500).send("Server error");
+  }
+});
+
+//  @route  GET v1/auth/user
+//  @desc   Gets a specific user
+//  @access Private
+router.get("/user", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    const payload = {
+      user: {
+        id: req.user.id,
+        email: user.email,
+        name: user.name,
+        authenticated: true,
+        subscription: user.subscription,
+        subscriptionEndDate: user.subscriptionEndDate,
+        subscriptionType: user.subscriptionType,
+        publicKey: user.publicKey,
+        avatar: user.avatar,
+      },
+    };
+
+    res.json(payload);
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("Server error");
   }
 });
 
@@ -112,7 +140,7 @@ router.post(
           name,
           email,
           authCheckDecrypted,
-          subscription: false
+          subscription: false,
         });
 
         //  Save user to DB
@@ -124,7 +152,7 @@ router.post(
             email: email,
             name,
             data: user.authCheckDecrypted,
-            subscription: false
+            subscription: false,
           },
         };
 
@@ -208,7 +236,7 @@ router.post(
       user["authCheckEncrypted"] = data;
       user["publicKey"] = publicKey;
       user["privateKey"] = privateKey;
-      user['subscription'] = false;
+      user["subscription"] = false;
 
       await user.save();
 
@@ -218,7 +246,7 @@ router.post(
           email: user.email,
           name: user.name,
           authenticated: true,
-          subscription: false
+          subscription: false,
         },
       };
 
@@ -262,7 +290,7 @@ router.post(
       const user = await User.findOne({ email });
       if (!user) {
         console.log("User does not exist");
-        return res.status(400).json({ errors: [{ msg: "User data error" }] });
+        return res.status(400).json({msg: "Check your email or password"});
       }
 
       //  Check if user has validated account before login
@@ -376,14 +404,16 @@ router.post(
           name: user.name,
           authenticated: true,
           subscription: user.subscription,
+          subscriptionEndDate: user.subscriptionEndDate,
+          subscriptionType: user.subscriptionType,
           publicKey: user.publicKey,
           privateKey: user.privateKey,
-          avatar: user.avatar
+          avatar: user.avatar,
         },
       };
 
       //  Return JWT
-      //  Todo - convert this to send email (more secure)
+
       jwt.sign(
         payload,
         config.get("jwtSecret"),

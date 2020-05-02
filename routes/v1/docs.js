@@ -3,6 +3,7 @@ const router = express.Router();
 const { check, validationResult } = require("express-validator");
 const auth = require("../../middleware/auth");
 const sharedAuth = require("../../middleware/sharedAuth");
+const billing = require("../../middleware/billing");
 const config = require("config");
 const AWS = require("aws-sdk");
 const s3 = new AWS.S3({
@@ -11,12 +12,11 @@ const s3 = new AWS.S3({
 });
 
 const Document = require("../../models/Documents");
-const User = require("../../models/User");
 
 //  @route  GET v1/documents
 //  @desc   Get all documents for a specific user
 //  @access Private
-router.get("/", auth, async (req, res) => {
+router.get("/", auth, billing, async (req, res) => {
   try {
     const allDocuments = await Document.find().sort({ date: -1 });
 
@@ -34,7 +34,7 @@ router.get("/", auth, async (req, res) => {
 //  @route  GET v1/documents/:id
 //  @desc   Get single document for a user
 //  @access Private
-router.get("/:doc_id", auth, async (req, res) => {
+router.get("/:doc_id", auth, billing, async (req, res) => {
   try {
     //  Get the document
     const document = await Document.findOne({ id: req.params.doc_id });
@@ -84,6 +84,7 @@ router.post(
   "/",
   [
     auth,
+    billing,
     [
       check("title", "You must provide a title for your document")
         .not()
@@ -137,7 +138,7 @@ router.post(
 //  @route  DELETE v1/documents/:doc_id
 //  @desc   Delete a document
 //  @access Private
-router.delete("/:doc_id", auth, async (req, res) => {
+router.delete("/:doc_id", auth, billing, async (req, res) => {
   try {
     const document = await Document.findOne({ id: req.params.doc_id });
 
@@ -184,7 +185,7 @@ router.delete("/:doc_id", auth, async (req, res) => {
 //  @desc   Updated a user's document
 //  @access Private
 
-router.put("/:doc_id", auth, async (req, res) => {
+router.put("/:doc_id", auth, billing, async (req, res) => {
   try {
     let document = await Document.findOne({ id: req.params.doc_id });
 
@@ -240,7 +241,7 @@ router.put("/:doc_id", auth, async (req, res) => {
 //  @desc   Add a tag to a user's document
 //  @access Private
 
-router.put("/tags/:doc_id", auth, async (req, res) => {
+router.put("/tags/:doc_id", auth, billing, async (req, res) => {
   try {
     let document = await Document.findOne({ id: req.params.doc_id });
 
@@ -276,7 +277,7 @@ router.put("/tags/:doc_id", auth, async (req, res) => {
   }
 });
 
-router.delete("/tags/:doc_id/:tag_id", auth, async (req, res) => {
+router.delete("/tags/:doc_id/:tag_id", auth, billing, async (req, res) => {
   try {
     let document = await Document.findOne({ id: req.params.doc_id });
 
@@ -308,7 +309,7 @@ router.delete("/tags/:doc_id/:tag_id", auth, async (req, res) => {
   }
 });
 
-router.put("/shared-link/:doc_id", auth, async (req, res) => {
+router.put("/shared-link/:doc_id", auth, billing, async (req, res) => {
   try {
     let document = await Document.findOne({ id: req.params.doc_id });
 
@@ -426,7 +427,7 @@ router.get("/shared/:share_id/:doc_id", sharedAuth, async (req, res) => {
 //  @route  DELETE v1/documents/shared/:share_id/:doc_id
 //  @desc   Delete access to a document shared with a link
 //  @access Private
-router.delete("/shared-link/:share_id/:doc_id", auth, async (req, res) => {
+router.delete("/shared-link/:share_id/:doc_id", auth, billing, async (req, res) => {
   try {
     //  Get the document
     const document = await Document.findOne({ id: req.params.doc_id });
@@ -482,7 +483,7 @@ router.delete("/shared-link/:share_id/:doc_id", auth, async (req, res) => {
 //  @route  PUT v1/documents/shared/:share_id/:doc_id
 //  @desc   Update access to a document shared with a link
 //  @access Private
-router.put("/shared-link/:share_id/:doc_id", auth, async (req, res) => {
+router.put("/shared-link/:share_id/:doc_id", auth, billing, async (req, res) => {
   try {
     //  Get the document
     const document = await Document.findOne({ id: req.params.doc_id });

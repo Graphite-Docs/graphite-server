@@ -13,22 +13,6 @@ const UserSchema = new mongoose.Schema({
   avatar: {
     type: String
   },
-  subscription: {
-    type: Boolean, 
-    required: true, 
-    default: false
-  },
-  subscriptionType: {
-    type: String, 
-    required: true, 
-    default: 'personal'
-  },
-  paymentCustomerId: {
-    type: String
-  },
-  subscriptionEndDate: {
-    type: Number
-  }, 
   authCheckEncrypted: {
     type: String
   },
@@ -49,6 +33,17 @@ const UserSchema = new mongoose.Schema({
       organization: {
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'organization'
+      }, 
+      role: {
+        type: String, 
+        required: true
+      }, 
+      teamKeys: {
+        type: Object, 
+        required: true
+      }, 
+      pending: {
+        type: Boolean
       }
     }
   ],

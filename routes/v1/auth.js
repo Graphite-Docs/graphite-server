@@ -6,14 +6,17 @@ const config = require("config");
 const auth = require("../../middleware/auth");
 const max_attempts = require("../../middleware/max_attempts");
 const sgMail = require("@sendgrid/mail");
+
 sgMail.setApiKey(config.get("SENGRID_API_KEY"));
 
 const { check, validationResult } = require("express-validator");
 const User = require("../../models/User");
 
-//  @route  GET v1/auth/verifyPayment/:user_id
-//  @desc   Gets a specific user and verifies their current payment status
-//  @access Private
+/**
+ * @route  GET v1/auth/verifyPayment/:user_id
+ * @desc   Gets a specific user and verifies their current payment status
+ * @access Private
+ */
 
 router.get("/verifyPayment/:user_id", auth, async (req, res) => {
   try {
@@ -30,37 +33,34 @@ router.get("/verifyPayment/:user_id", auth, async (req, res) => {
   }
 });
 
-//  @route  GET v1/auth/user
-//  @desc   Gets a specific user
-//  @access Private
+/**
+ *  @route  GET v1/auth/user
+ *  @desc   Gets a specific user
+ *  @access Private
+ */
+
 router.get("/user", auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const user = await User.findById(req.user.id)
+      .select("-authCheckDecrypted")
+      .select("-authCheckEncrypted")
+      .select("-attempts");
     const payload = {
-      user: {
-        id: req.user.id,
-        email: user.email,
-        name: user.name,
-        authenticated: true,
-        subscription: user.subscription,
-        subscriptionEndDate: user.subscriptionEndDate,
-        subscriptionType: user.subscriptionType,
-        publicKey: user.publicKey,
-        avatar: user.avatar,
-      },
+      user,
     };
 
     res.json(payload);
-
   } catch (error) {
     console.log(error);
     res.status(500).send("Server error");
   }
 });
 
-//  @route  POST v1/auth/register
-//  @desc   Register user and generate a jwt with authData to encrypt
-//  @access Public
+/**
+ *  @route  POST v1/auth/register
+ *  @desc   Register user and generate a jwt with authData to encrypt
+ *  @access Public
+ */
 
 router.post(
   "/register",
@@ -197,10 +197,11 @@ router.post(
   }
 );
 
-//  @route  POST v1/auth/register/validate
-//  @desc   validates a newly registered user by posting a password encrypted version
-//          of the auth check data, returns session JWT
-//  @access Private
+/**
+ *  @route  POST v1/auth/register/validate
+ *  @desc   validates a newly registered user by posting a password encrypted version of the auth check data, returns session JWT
+ *  @access Private
+ */
 
 router.post(
   "/register/validate",
@@ -247,6 +248,7 @@ router.post(
           name: user.name,
           authenticated: true,
           subscription: false,
+          organizations: user.organizations,
         },
       };
 
@@ -267,10 +269,13 @@ router.post(
   }
 );
 
-//  @route  POST v1/auth/login
-//  @desc   Sends email with JWT that includes the encrypted data for validation
-//  @access Public
+/**
+ *  @route  POST v1/auth/login
+ *  @desc   Sends email with JWT that includes the encrypted data for validation
+ *  @access Public
+ */
 
+/** Kicks off a login process */
 router.post(
   "/login",
   [check("email", "Please provide a valid email address").isEmail()],
@@ -290,7 +295,7 @@ router.post(
       const user = await User.findOne({ email });
       if (!user) {
         console.log("User does not exist");
-        return res.status(400).json({msg: "Check your email or password"});
+        return res.status(400).json({ msg: "Check your email or password" });
       }
 
       //  Check if user has validated account before login
@@ -349,11 +354,13 @@ router.post(
   }
 );
 
-//  @route  POST v1/auth/login/validate
-//  @desc   validates a login by posting a decrypted version
-//          of the auth check data, returns session JWT
-//  @access Private
+/**
+ *  @route  POST v1/auth/login/validate
+ *  @desc   validates a login by posting a decrypted version of the auth check data, returns session JWT
+ *  @access Private
+ */
 
+/** Validates a login */
 router.post(
   "/login/validate",
   [
@@ -403,12 +410,10 @@ router.post(
           email: user.email,
           name: user.name,
           authenticated: true,
-          subscription: user.subscription,
-          subscriptionEndDate: user.subscriptionEndDate,
-          subscriptionType: user.subscriptionType,
           publicKey: user.publicKey,
           privateKey: user.privateKey,
           avatar: user.avatar,
+          organizations: user.organizations
         },
       };
 

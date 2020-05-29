@@ -9,19 +9,29 @@ const OrganizationSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  users: [
+  billingContacts: [
     {
-      user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "user",
-        required: true
-      },
-      role: {
+      email: {
         type: String,
         required: true,
       },
     },
   ],
+  users: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+      required: true
+    },
+  ],
+  pastDue: {
+    type: Boolean, 
+    default: false
+  }, 
+  blockAccess: {
+    type: Boolean, 
+    default: false
+  },
   billingPlan: {
     type: String,
     required: true,

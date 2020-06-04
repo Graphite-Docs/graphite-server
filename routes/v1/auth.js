@@ -223,7 +223,7 @@ router.post(
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { email, data, privateKey, publicKey } = req.body;
+    const { email, data, privateKey, publicKey, org } = req.body;
 
     try {
       //  See if the user exists
@@ -238,6 +238,21 @@ router.post(
       user["publicKey"] = publicKey;
       user["privateKey"] = privateKey;
       user["subscription"] = false;
+
+      //  Check if org is passed through
+      //  If there is an org ID it means the user was invited by an organization.
+      //  Need to then take the following steps: 
+      //  1. Update the invite status on the org array in the User Model
+      //  2. Send a notification to the org account owner that the invite was accepted
+      if(org) {
+        const orgIndex = user.organizations.map(o => { return o.organization }).indexOf(org);
+        console.log(orgIndex);
+        let organizations = user.organizations;
+
+        organizations[orgIndex].pending = false;
+        user.organizations = organizations;
+        //  TODO: Send email to org admin here
+      }
 
       await user.save();
 

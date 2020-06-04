@@ -39,11 +39,12 @@ const UserSchema = new mongoose.Schema({
         required: true
       }, 
       teamKeys: {
-        type: Object, 
-        required: true
+        type: Object
       }, 
       pending: {
-        type: Boolean
+        type: Boolean, 
+        required: true, 
+        default: true
       }
     }
   ],

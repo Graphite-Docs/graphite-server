@@ -141,7 +141,7 @@ router.post(
       const newUserOrg = {
         organization: org.id,
         role,
-        teamKeys
+        teamKeys,
       };
       userOrgs.unshift(newUserOrg);
       user["organizations"] = userOrgs;
@@ -174,7 +174,7 @@ router.put(
         "You must provide a valid contact email for your organization"
       )
         .not()
-        .isEmpty()
+        .isEmpty(),
     ],
   ],
   async (req, res) => {
@@ -187,12 +187,12 @@ router.put(
     try {
       const org = await Organization.findById(req.params.id);
 
-      if(!org) {
-        return res.status(404).send('Organization not found');
+      if (!org) {
+        return res.status(404).send("Organization not found");
       }
 
-      org['name'] = name;
-      org['contactEmail'] = contactEmail;
+      org["name"] = name;
+      org["contactEmail"] = contactEmail;
 
       await org.save();
 
@@ -226,9 +226,9 @@ router.post(
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
-    
+
     try {
-      const { email, name, role, teamKeys } = req.body;
+      const { email, name, role, pending, teamKeys } = req.body;
       //  Need to create the news user in the DB
       //  If they exist, needs to update their org info
 
@@ -237,26 +237,31 @@ router.post(
       const org = await Organization.findById(req.params.id);
 
       if (user && user.authCheckEncrypted) {
-        //  User already exists. Need to take the following steps: 
+        //  User already exists. Need to take the following steps:
         //  1. Check if teamKeys are part of the payload
-        //  2. If not, return a response with the user to add's public key
-        //  3. If so, we need to: 
+        //  2. If not, return a response with the user to add public key
+        //  3. If so, we need to:
         //    a. Update the user's org array with all org info including the team keys
         //    b. Send the user and invite letting them know they have access to this org
-        //    c. Update the Organizations model to include this user ID as a member 
+        //    c. Update the Organizations model to include this user ID as a member
 
-        if(teamKeys) {
-          return res.status(200).send({ msg: "User already exists, please encrypt team key and re-send request", key: user.publicKey });
+        if (!teamKeys) {
+          return res.status(200).send({
+            msg:
+              "User already exists, please encrypt team key and re-send request",
+            key: user.publicKey,
+          });
         }
 
         const organizations = user.organizations;
         const newOrg = {
           organization: org.id,
-          role, 
-          teamKeys
-        }
+          role,
+          pending,
+          teamKeys,
+        };
         organizations.unshift(newOrg);
-        user['organizations'] = organizations;
+        user["organizations"] = organizations;
         await user.save();
 
         const orgUsers = org.users;
@@ -265,45 +270,29 @@ router.post(
         org.users = orgUsers;
         await org.save();
 
-        //  TODO: Send Email Here
+        const link =
+          config.get("environment") === "local"
+            ? `http://localhost:3000`
+            : `someurl`;
+        const msg = {
+          to: email,
+          from: "contact@graphitedocs.com",
+          subject: `Graphite Docs - You've been invited to join the ${org.name} team`,
+          text: `You've been invited to join the ${org.name} team, get started now.`,
+          html: `<div>You've been invited to join the ${org.name} team, get started now.</div>`,
+          templateId: "d-d1bca86ff5644ed28115092d16868bcf",
+          dynamic_template_data: {
+            logInUrl: link,
+            name,
+            teamName: org.name,
+          },
+        };
+        await sgMail.send(msg);
         res.json(org);
       } else if (user) {
         //  User has been created but has not yet created their encryption keys by using their password
         //  Need to simply send an email reminder in this scenario
         //  Can be used if we want an email reminders option in the interface
-        //  TODO: Send Email
-      } else {
-        //  The user does not yet exist, need to take the following steps: 
-        //  1. Create the user like we would on a normal sign up but: 
-        //    a. Add the organization to the orgs array
-        //    b. Send a slightly different email to the user than on normal account validation
-        
-        const authCheckDecrypted = faker.lorem.paragraph();
-        const organizations = [];
-        const newOrg = {
-          organization: req.params.id, 
-          role, 
-          teamKeys: {}
-        }
-        organizations.unshift(newOrg);
-        user = new User({
-          name,
-          email,
-          organizations,
-          authCheckDecrypted,
-          subscription: false,
-        });
-
-        //  Save user to DB
-        await user.save();
-
-        //  Update org in DB
-        const orgUsers = org.users;
-        orgUsers.push(user.id.toString());
-
-        org.users = orgUsers;
-        await org.save();
-
         const payload = {
           user: {
             id: user.id,
@@ -311,7 +300,7 @@ router.post(
             name,
             data: user.authCheckDecrypted,
             subscription: false,
-            org: org.id
+            org: org.id,
           },
         };
 
@@ -338,7 +327,84 @@ router.post(
                 dynamic_template_data: {
                   verificationUrl: link,
                   name,
-                  teamName: org.name
+                  teamName: org.name,
+                },
+              };
+              await sgMail.send(msg);
+              return res.json(org);
+            } catch (error) {
+              console.log(error);
+              return res.status(500).send("Server error");
+            }
+          }
+        );
+      } else {
+        //  The user does not yet exist, need to take the following steps:
+        //  1. Create the user like we would on a normal sign up but:
+        //    a. Add the organization to the orgs array
+        //    b. Send a slightly different email to the user than on normal account validation
+
+        const authCheckDecrypted = faker.lorem.paragraph();
+        const organizations = [];
+        const newOrg = {
+          organization: req.params.id,
+          role,
+          teamKeys: {},
+        };
+        organizations.unshift(newOrg);
+        user = new User({
+          name,
+          email,
+          organizations,
+          authCheckDecrypted,
+          subscription: false,
+        });
+
+        //  Save user to DB
+        await user.save();
+
+        //  Update org in DB
+        const orgUsers = org.users;
+        orgUsers.push(user.id.toString());
+
+        org.users = orgUsers;
+        await org.save();
+
+        const payload = {
+          user: {
+            id: user.id,
+            email: email,
+            name,
+            data: user.authCheckDecrypted,
+            subscription: false,
+            org: org.id,
+          },
+        };
+
+        //  Return JWT
+        jwt.sign(
+          payload,
+          config.get("jwtSecret"),
+          { expiresIn: 600000 },
+          async (err, token) => {
+            if (err) throw err;
+            try {
+              //  Email template with verification link that embeds the token
+              const link =
+                config.get("environment") === "local"
+                  ? `http://localhost:3000/verify?type=registration&token=${token}`
+                  : `someurl/verify?type=registration&token=${token}`;
+              const msg = {
+                to: email,
+                from: "contact@graphitedocs.com",
+                subject: `Graphite Docs - You've been invited to join the ${org.name} team`,
+                text: `Please verifiy your email address.`,
+                html: "<div>Please verify your email address.</div>",
+                templateId: "d-938b97e3e05f4fe296ba32a47144bab8",
+                dynamic_template_data: {
+                  verificationUrl: link,
+                  name,
+                  teamName: org.name,
                 },
               };
               await sgMail.send(msg);
@@ -356,5 +422,52 @@ router.post(
     }
   }
 );
+
+//  @route  DELETE v1/organizations/:id/users/:id
+//  @desc   Deletes a user from the organization
+//  @access Private
+
+router.delete("/:id/users/:user_email", [auth, role], async (req, res) => {
+  //  1. Find the organization
+  //  2. Find the user
+  //  3. Remove user from the organization's users array
+  //  4. Remove organization from user's organizations array
+
+  try {
+    const email = decodeURIComponent(req.params.user_email);
+    const org = await Organization.findById(req.params.id);
+
+    if (!org) {
+      return res.status(404).send("Organization not found");
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).send("User not found");
+    }
+
+    const orgUsers = org.users.filter(
+      (u) => u.toString() !== user.id.toString()
+    );
+
+    org.users = orgUsers;
+
+    await org.save();
+
+    const userOrgs = user.organizations.filter(
+      (o) => o.organization.toString() !== req.params.id
+    );
+
+    user.organizations = userOrgs;
+
+    await user.save();
+
+    res.json(org);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("Server error");
+  }
+});
 
 module.exports = router;

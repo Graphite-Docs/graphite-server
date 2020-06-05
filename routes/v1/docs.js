@@ -12,19 +12,34 @@ const s3 = new AWS.S3({
 });
 
 const Document = require("../../models/Documents");
+const TeamDocument = require("../../models/TeamDocuments");
+const User = require("../../models/User");
 
 //  @route  GET v1/documents
 //  @desc   Get all documents for a specific user
 //  @access Private
 router.get("/", auth, billing, async (req, res) => {
+  //  TODO: This is a really inefficient way of fetching docs
+  //  Should fetch only by the user's ID rather than scanning the entire object
   try {
-    const allDocuments = await Document.find().sort({ date: -1 });
+    let documents = await Document.find({ user: req.user.id.toString() }).sort({ date: -1 });
 
-    const documents = allDocuments.filter(
-      (doc) => doc.user.toString() === req.user.id
-    );
+    //  Check if the user is a member of a team
+    const user = await User.findById(req.user.id);
+    const orgs = user.organizations.length > 0 ? true : false;
+    
+    if(!orgs) {
+      return res.json(documents);   
+    }
 
-    res.json(documents);
+    //  If user is member of a team, we need to fetch all docs across all teams
+    //  The client will handle displaying the right docs for the right team
+    //  Remember, the user can switch between teams in the UI
+    for(const org of user.organizations) {
+      const docs = await TeamDocument.find({ org: org.organization.toString() });
+      documents.push(...docs);
+    }    
+    res.json(documents)
   } catch (error) {
     console.log(error);
     res.status(500).send("Sever error");

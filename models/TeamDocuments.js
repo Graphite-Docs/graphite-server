@@ -9,7 +9,7 @@ const TeamDocumentSchema = new mongoose.Schema({
     type: String, 
     required: true
   },
-  teamDoc: {
+  wholeTeam: {
     type: Boolean, 
     required: true, 
     default: true

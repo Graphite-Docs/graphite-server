@@ -22,24 +22,28 @@ router.get("/", auth, billing, async (req, res) => {
   //  TODO: This is a really inefficient way of fetching docs
   //  Should fetch only by the user's ID rather than scanning the entire object
   try {
-    let documents = await Document.find({ user: req.user.id.toString() }).sort({ date: -1 });
+    let documents = await Document.find({ user: req.user.id.toString() }).sort({
+      date: -1,
+    });
 
     //  Check if the user is a member of a team
     const user = await User.findById(req.user.id);
     const orgs = user.organizations.length > 0 ? true : false;
-    
-    if(!orgs) {
-      return res.json(documents);   
+
+    if (!orgs) {
+      return res.json(documents);
     }
 
     //  If user is member of a team, we need to fetch all docs across all teams
     //  The client will handle displaying the right docs for the right team
     //  Remember, the user can switch between teams in the UI
-    for(const org of user.organizations) {
-      const docs = await TeamDocument.find({ org: org.organization.toString() });
+    for (const org of user.organizations) {
+      const docs = await TeamDocument.find({
+        org: org.organization.toString(),
+      });
       documents.push(...docs);
-    }    
-    res.json(documents)
+    }
+    res.json(documents);
   } catch (error) {
     console.log(error);
     res.status(500).send("Sever error");
@@ -117,7 +121,6 @@ router.post(
     }
 
     try {
-      //  Save content to S3
       const { id, title, content } = req.body;
 
       const params = {
@@ -202,20 +205,105 @@ router.delete("/:doc_id", auth, billing, async (req, res) => {
 
 router.put("/:doc_id", auth, billing, async (req, res) => {
   try {
-    let document = await Document.findOne({ id: req.params.doc_id });
+    //  This endpoint takes both posts for a single user's document and for
+    //  documents shared with the team. So we need to check for the teamDoc
+    //  variable. If true, we need to then check the access array
 
-    if (!document) {
+    const {
+      id,
+      title,
+      content,
+      teamContent,
+      teamDoc,
+      wholeTeam,
+      access,
+      orgId,
+    } = req.body;
+
+    //  Will check if the document is available in the normal document model
+    //  regardless of whether it's a single user document or a team document.
+    //  If it is available, we will still need to check if the teamDoc variable
+    //  is set to true.
+
+    let document = await Document.findOne({ id: req.params.doc_id });
+    let teamDocument;
+
+    //  Check if need to fetch teamDoc and then fetch it
+
+    if (teamDoc) {
+      const isOwner = document ? true : false;
+      const accessAvailable = access.indlues(req.user.id.toString());
+
+      if (!accessAvailable && !isOwner) {
+        return res.status(401).send("Unauthorized");
+      }
+
+      teamDocument = await TeamDocument.findOne({ id: req.params.doc_id });
+
+      //  If the team document is not found, we need upload it and create it
+      //  Note: teamContent is the content encrypted with the teamKey
+      //  content is the content encrypted with the owner's key
+
+      const params = {
+        Bucket: config.get("bucketName"),
+        Key: `${orgId}/${id}.json`,
+        Body: JSON.stringify(teamContent),
+      };
+
+      await s3.upload(params, async (err, data) => {
+        if (err) {
+          console.log(err);
+          res.status(500).send("Server error");
+        }
+
+        if (!teamDocument) {
+          teamDocument = new TeamDocument({
+            id,
+            org: orgId,
+            wholeTeam,
+            owner: req.user.id,
+            title,
+            access,
+            contentUrl: data.Location,
+          });
+
+          await teamDocument.save();
+        } else {
+          const documentFields = {
+            id,
+            title,
+            access,
+            wholeTeam,
+            contentUrl: data.Location,
+          };
+
+          teamDocument = await TeamDocument.findOneAndUpdate(
+            { id: req.params.doc_id },
+            { $set: documentFields },
+            { new: true }
+          );
+
+          await teamDocument.save();
+        }
+      });
+    }
+
+    if (!document && !teamDoc) {
       return res.status(404).send({ msg: "Document not found" });
     }
 
-    //  Check on user
-    //  Adding toString because the userId is an ObjectId, not a string
     if (document.user.toString() !== req.user.id) {
-      return res.status(401).json({ msg: "User not authorized" });
+      //  If this is a teamDoc, may be false and it's ok
+      //  We just need to return the team document object
+      if (teamDoc) {
+        return res.json(teamDocument);
+      } else {
+        //  If not a teamDoc and the user is not authorized, reject access
+        return res.status(401).json({ msg: "User not authorized" });
+      }
     }
 
-    //  Save content to S3
-    const { id, title, content } = req.body;
+    //  Save content for individual user to S3
 
     const params = {
       Bucket: config.get("bucketName"),
@@ -251,6 +339,8 @@ router.put("/:doc_id", auth, billing, async (req, res) => {
     res.status(500).send("Server error");
   }
 });
+
+//  @TODO handle this for team documents
 
 //  @route  PUT v1/documents/tags/:doc_id
 //  @desc   Add a tag to a user's document
@@ -442,103 +532,113 @@ router.get("/shared/:share_id/:doc_id", sharedAuth, async (req, res) => {
 //  @route  DELETE v1/documents/shared/:share_id/:doc_id
 //  @desc   Delete access to a document shared with a link
 //  @access Private
-router.delete("/shared-link/:share_id/:doc_id", auth, billing, async (req, res) => {
-  try {
-    //  Get the document
-    const document = await Document.findOne({ id: req.params.doc_id });
-    if (document) {
-      //  Check on user
-      //  Adding toString because the userId is an ObjectId, not a string
-      if (document.user.toString() !== req.user.id) {
-        return res.status(401).json({ msg: "User not authorized" });
-      }
-
-      //  Get the shareLink info
-      if (!document.shareLink) {
-        return res.status(401).json({ msg: "Document not shared" });
-      }
-
-      const shareData = document.shareLink;
-      const index = shareData
-        .map((a) => a.shareId)
-        .indexOf(req.params.share_id);
-
-      if (index > -1) {
-        shareData.splice(index, 1);
-      } else {
-        return res.status(500).send("Server error");
-      }
-
-      document.shareLink = shareData;
-
-      //  Delete shared content from S3
-      var deleteParams = {
-        Bucket: config.get("bucketName"),
-        Key: `${req.user}/shared/${req.params.share_id}/${req.params.doc_id}.json`,
-      };
-
-      s3.deleteObject(deleteParams, async (err, data) => {
-        if (err) {
-          console.log(err);
-          res.status(500).send("Server error");
+router.delete(
+  "/shared-link/:share_id/:doc_id",
+  auth,
+  billing,
+  async (req, res) => {
+    try {
+      //  Get the document
+      const document = await Document.findOne({ id: req.params.doc_id });
+      if (document) {
+        //  Check on user
+        //  Adding toString because the userId is an ObjectId, not a string
+        if (document.user.toString() !== req.user.id) {
+          return res.status(401).json({ msg: "User not authorized" });
         }
 
-        await document.save();
-        res.json(document);
-      });
-    } else {
-      res.status(404).send({ msg: "Document does not exist" });
+        //  Get the shareLink info
+        if (!document.shareLink) {
+          return res.status(401).json({ msg: "Document not shared" });
+        }
+
+        const shareData = document.shareLink;
+        const index = shareData
+          .map((a) => a.shareId)
+          .indexOf(req.params.share_id);
+
+        if (index > -1) {
+          shareData.splice(index, 1);
+        } else {
+          return res.status(500).send("Server error");
+        }
+
+        document.shareLink = shareData;
+
+        //  Delete shared content from S3
+        var deleteParams = {
+          Bucket: config.get("bucketName"),
+          Key: `${req.user}/shared/${req.params.share_id}/${req.params.doc_id}.json`,
+        };
+
+        s3.deleteObject(deleteParams, async (err, data) => {
+          if (err) {
+            console.log(err);
+            res.status(500).send("Server error");
+          }
+
+          await document.save();
+          res.json(document);
+        });
+      } else {
+        res.status(404).send({ msg: "Document does not exist" });
+      }
+    } catch (error) {
+      console.log(error);
+      res.status(500).send("Sever error");
     }
-  } catch (error) {
-    console.log(error);
-    res.status(500).send("Sever error");
   }
-});
+);
 
 //  @route  PUT v1/documents/shared/:share_id/:doc_id
 //  @desc   Update access to a document shared with a link
 //  @access Private
-router.put("/shared-link/:share_id/:doc_id", auth, billing, async (req, res) => {
-  try {
-    //  Get the document
-    const document = await Document.findOne({ id: req.params.doc_id });
-    if (document) {
-      //  Check on user
-      //  Adding toString because the userId is an ObjectId, not a string
-      if (document.user.toString() !== req.user.id) {
-        return res.status(401).json({ msg: "User not authorized" });
-      }
+router.put(
+  "/shared-link/:share_id/:doc_id",
+  auth,
+  billing,
+  async (req, res) => {
+    try {
+      //  Get the document
+      const document = await Document.findOne({ id: req.params.doc_id });
+      if (document) {
+        //  Check on user
+        //  Adding toString because the userId is an ObjectId, not a string
+        if (document.user.toString() !== req.user.id) {
+          return res.status(401).json({ msg: "User not authorized" });
+        }
 
-      //  Get the shareLink info
-      if (!document.shareLink) {
-        return res.status(401).json({ msg: "Document not shared" });
-      }
+        //  Get the shareLink info
+        if (!document.shareLink) {
+          return res.status(401).json({ msg: "Document not shared" });
+        }
 
-      const shareData = document.shareLink;
-      const index = shareData
-        .map((a) => a.shareId)
-        .indexOf(req.params.share_id);
+        const shareData = document.shareLink;
+        const index = shareData
+          .map((a) => a.shareId)
+          .indexOf(req.params.share_id);
 
-      if (index > -1) {
-        const thisShareLink = shareData[index];
-        thisShareLink.readOnly = !thisShareLink.readOnly;
+        if (index > -1) {
+          const thisShareLink = shareData[index];
+          thisShareLink.readOnly = !thisShareLink.readOnly;
 
-        shareData[index] = thisShareLink;
+          shareData[index] = thisShareLink;
+        } else {
+          return res.status(500).send("Server error");
+        }
+
+        document.shareLink = shareData;
+
+        await document.save();
+        res.json(document);
       } else {
-        return res.status(500).send("Server error");
+        res.status(404).send({ msg: "Document does not exist" });
       }
-
-      document.shareLink = shareData;
-
-      await document.save();
-      res.json(document);
-    } else {
-      res.status(404).send({ msg: "Document does not exist" });
+    } catch (error) {
+      console.log(error);
+      res.status(500).send("Sever error");
     }
-  } catch (error) {
-    console.log(error);
-    res.status(500).send("Sever error");
   }
-});
+);
 
 module.exports = router;

@@ -254,40 +254,56 @@ router.post(
         }
 
         const organizations = user.organizations;
-        const newOrg = {
-          organization: org.id,
-          role,
-          pending,
-          teamKeys,
-        };
-        organizations.unshift(newOrg);
+
+        //  If the organization exists, update it, otherwise create it
+        let thisOrg = organizations.filter(o => o.organization.toString() === req.params.id)[0];
+        
+        if(thisOrg) {
+          //  Update the org array with team keys
+          thisOrg['teamKeys'] = teamKeys;
+        } else {
+          thisOrg = {
+            organization: org.id,
+            role,
+            pending,
+            teamKeys,
+          };
+          organizations.unshift(newOrg);
+        }
+        
         user["organizations"] = organizations;
         await user.save();
 
         const orgUsers = org.users;
-        orgUsers.push(user.id.toString());
 
-        org.users = orgUsers;
-        await org.save();
+        //  Check if user is already in the org users array
+        const thisUser = orgUsers.filter(u => u.id.toString() === user.id.toString())[0];
 
-        const link =
-          config.get("environment") === "local"
-            ? `http://localhost:3000`
-            : `someurl`;
-        const msg = {
-          to: email,
-          from: "contact@graphitedocs.com",
-          subject: `Graphite Docs - You've been invited to join the ${org.name} team`,
-          text: `You've been invited to join the ${org.name} team, get started now.`,
-          html: `<div>You've been invited to join the ${org.name} team, get started now.</div>`,
-          templateId: "d-d1bca86ff5644ed28115092d16868bcf",
-          dynamic_template_data: {
-            logInUrl: link,
-            name,
-            teamName: org.name,
-          },
-        };
-        await sgMail.send(msg);
+        if(!thisUser) {
+          orgUsers.push(user.id.toString());
+
+          org.users = orgUsers;
+          await org.save();
+  
+          const link =
+            config.get("environment") === "local"
+              ? `http://localhost:3000`
+              : `someurl`;
+          const msg = {
+            to: email,
+            from: "contact@graphitedocs.com",
+            subject: `Graphite Docs - You've been invited to join the ${org.name} team`,
+            text: `You've been invited to join the ${org.name} team, get started now.`,
+            html: `<div>You've been invited to join the ${org.name} team, get started now.</div>`,
+            templateId: "d-d1bca86ff5644ed28115092d16868bcf",
+            dynamic_template_data: {
+              logInUrl: link,
+              name,
+              teamName: org.name,
+            },
+          };
+          await sgMail.send(msg);
+        }        
         res.json(org);
       } else if (user) {
         //  User has been created but has not yet created their encryption keys by using their password

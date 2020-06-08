@@ -35,7 +35,7 @@ router.get("/verifyPayment/:user_id", auth, async (req, res) => {
 
 /**
  *  @route  GET v1/auth/user
- *  @desc   Gets a specific user
+ *  @desc   Gets logged in user
  *  @access Private
  */
 
@@ -50,6 +50,24 @@ router.get("/user", auth, async (req, res) => {
     };
 
     res.json(payload);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("Server error");
+  }
+});
+
+/**
+ *  @route  GET v1/auth/user/:id
+ *  @desc   Gets a specific user
+ *  @access Private
+ */
+
+router.get("/user/:id", auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id)
+      .select("publicKey")
+
+    res.json(user);
   } catch (error) {
     console.log(error);
     res.status(500).send("Server error");

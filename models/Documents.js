@@ -16,7 +16,7 @@ const DocumentSchema = new mongoose.Schema({
   contentUrl: {
     type: String, 
     required: true
-  },
+  }, 
   tags: [
     {
       id: {

@@ -9,6 +9,10 @@ const DocumentSchema = new mongoose.Schema({
     type: String, 
     required: true
   },
+  teamDocId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'team_docs'
+  },
   title: {
     type: String, 
     required: true

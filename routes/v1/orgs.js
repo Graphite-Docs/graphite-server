@@ -268,7 +268,7 @@ router.post(
             pending,
             teamKeys,
           };
-          organizations.unshift(newOrg);
+          organizations.unshift(thisOrg);
         }
         
         user["organizations"] = organizations;
@@ -277,7 +277,7 @@ router.post(
         const orgUsers = org.users;
 
         //  Check if user is already in the org users array
-        const thisUser = orgUsers.filter(u => u.id.toString() === user.id.toString())[0];
+        const thisUser = orgUsers.filter(u => u.toString() === user.id.toString())[0];
 
         if(!thisUser) {
           orgUsers.push(user.id.toString());

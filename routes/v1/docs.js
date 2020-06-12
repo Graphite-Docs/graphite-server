@@ -19,8 +19,6 @@ const User = require("../../models/User");
 //  @desc   Get all documents for a specific user
 //  @access Private
 router.get("/", auth, billing, async (req, res) => {
-  //  TODO: This is a really inefficient way of fetching docs
-  //  Should fetch only by the user's ID rather than scanning the entire object
   try {
     let documents = await Document.find({ user: req.user.id.toString() }).sort({
       date: -1,
@@ -84,10 +82,86 @@ router.get("/:doc_id", auth, billing, async (req, res) => {
           res.json(documentToReturn);
         });
       } else {
-        res.status(401).send({ msg: "Unauthorized" });
+        //  Since we are initially fetching from the main document model,
+        //  the document might exist but the user might not be the owner
+        //  In that case, we need to check if it's a team doc and if the
+        //  user has acces
+
+        const teamDocument = await TeamDocument.findById(req.params.id);
+        if (!teamDocument) {
+          res.status(404).send({ msg: "Document does not exist" });
+        } else {
+          //  Need to see if the user has access to this document
+          const access = teamDoc.access;
+
+          if (!access.includes(req.user.id)) {
+            return res.status(401).send("User not authorized");
+          }
+
+          //  Now we fetch the contentUrl data from S3
+          //  The orgID is part of the TeamDocument model, so we can get it there
+          const orgId = teamDocument.org.toString();
+
+          var getParams = {
+            Bucket: config.get("bucketName"),
+            Key: `${orgId}/${req.params.doc_id}.json`,
+          };
+
+          s3.getObject(getParams, async (err, data) => {
+            // Handle any error and exit
+            if (err) {
+              return res.status(404).send({ msg: "Could not fetch document" });
+            }
+
+            let objectData = data.Body.toString("utf-8");
+            const content = objectData;
+            let documentToReturn = {
+              document,
+              content,
+            };
+
+            res.json(documentToReturn);
+          });
+        }
       }
     } else {
-      res.status(404).send({ msg: "Document does not exist" });
+      //  This could be a team document, need to check
+      const teamDocument = await TeamDocument.findById(req.params.id);
+      if (!teamDocument) {
+        res.status(404).send({ msg: "Document does not exist" });
+      } else {
+        //  Need to see if the user has access to this document
+        const access = teamDoc.access;
+
+        if (!access.includes(req.user.id)) {
+          return res.status(401).send("User not authorized");
+        }
+
+        //  Now we fetch the contentUrl data from S3
+        //  The orgID is part of the TeamDocument model, so we can get it there
+        const orgId = teamDocument.org.toString();
+
+        var getParams = {
+          Bucket: config.get("bucketName"),
+          Key: `${orgId}/${req.params.doc_id}.json`,
+        };
+
+        s3.getObject(getParams, async (err, data) => {
+          // Handle any error and exit
+          if (err) {
+            return res.status(404).send({ msg: "Could not fetch document" });
+          }
+
+          let objectData = data.Body.toString("utf-8");
+          const content = objectData;
+          let documentToReturn = {
+            document,
+            content,
+          };
+
+          res.json(documentToReturn);
+        });
+      }
     }
   } catch (error) {
     console.log(error);
@@ -182,7 +256,6 @@ router.delete("/:doc_id", auth, billing, async (req, res) => {
         res.status(500).send("Server error");
       }
 
-      console.log(data);
       //  Remove document from DB
       await document.remove();
 
@@ -215,7 +288,6 @@ router.put("/:doc_id", auth, billing, async (req, res) => {
       content,
       teamContent,
       teamDoc,
-      wholeTeam,
       access,
       orgId,
     } = req.body;
@@ -231,8 +303,14 @@ router.put("/:doc_id", auth, billing, async (req, res) => {
     //  Check if need to fetch teamDoc and then fetch it
 
     if (teamDoc) {
-      const isOwner = document ? true : false;
-      const accessAvailable = access.indlues(req.user.id.toString());
+      let isOwner = false;
+      if (document) {
+        isOwner = document.user.toString() === req.user.id ? true : false;
+      } else {
+        isOwner = false;
+      }
+
+      const accessAvailable = access.includes(req.user.id.toString());
 
       if (!accessAvailable && !isOwner) {
         return res.status(401).send("Unauthorized");
@@ -260,7 +338,6 @@ router.put("/:doc_id", auth, billing, async (req, res) => {
           teamDocument = new TeamDocument({
             id,
             org: orgId,
-            wholeTeam,
             owner: req.user.id,
             title,
             access,
@@ -321,6 +398,7 @@ router.put("/:doc_id", auth, billing, async (req, res) => {
       const documentFields = {
         id,
         title,
+        teamDocId: teamDocument ? teamDocument._id : null,
         contentUrl: data.Location,
       };
 
@@ -331,8 +409,11 @@ router.put("/:doc_id", auth, billing, async (req, res) => {
       );
 
       await document.save();
-
-      res.json(document);
+      if (teamDocument) {
+        return res.json(teamDocument);
+      } else {
+        return res.json(document);
+      }
     });
   } catch (error) {
     console.log(error);

@@ -19,7 +19,7 @@
     "mongoose": "^5.5.5",
     "nodemon": "^1.19.0",
     "radiks-server": "^0.1.10",
-    "socket.io": "^2.0.4",
+    "socket.io": "^2.4.0",
     "uuidv4": "^4.0.0"
   },
   "now": {
